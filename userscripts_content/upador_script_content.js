@@ -8,6 +8,7 @@
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
 // @grant        GM_getValue
+// @grant        GM_setValue
 // @grant        unsafeWindow
 // @grant        GM_xmlhttpRequest
 // @require      http://code.jquery.com/jquery-1.12.4.min.js
@@ -36,7 +37,7 @@ const Max_Tempo_Espera = 900;
 const Etapa = "Etapa_1";
 // Escolha se voce deseja que o bot enfileire os edificios na ordem definida (= true) ou
 // assim que um predio estiver disponivel para a fila de construcao (= false)
-const Construcao_Edificios_Ordem = true; // <-- ESTA É A VARIAVEL CORRETA
+const Construcao_Edificios_Ordem = true;
 
 // --- CONFIGURACAO DE REFRESH AUTOMATICO ---
 const Auto_Refresh_Ativado = true; // Define se o refresh automatico esta ativo (true/false)
@@ -52,13 +53,17 @@ const ALERT_COOLDOWN_MS = 5000; // 5 segundos de cooldown para o mesmo alerta
 // --- FIM DA CONFIGURACAO DE ALERTA DE CONSTRUCAO ---
 
 // --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---
-const FIREBASE_CLIENT_CONFIG = {}; // Será preenchido dinamicamente pelo servidor
+// Será preenchido dinamicamente pelo servidor
+const FIREBASE_CLIENT_CONFIG = {};
 // --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG --
 
+// --- CAMPO PARA USERSCRIPT API KEY (Gerada no Dashboard MULTCONTROL) ---
+// Será preenchido dinamicamente pelo servidor
+const USERSCRIPT_API_KEY = "";
+// --- FIM DO CAMPO PARA USERSCRIPT API KEY --
+
 // --- CAMPO PARA ID TOKEN DO USUARIO (Gerado pelo Dashboard MULTCONTROL) ---
-// POR FAVOR, SUBSTITUA "SEU_ID_TOKEN_AQUI" PELO SEU TOKEN REAL.
-// SEM ISSO, A FUNCIONALIDADE DE ALERTA NAO VAI FUNCIONAR.
-const FIREBASE_AUTH_ID_TOKEN = "TOKEN_EXEMPLO_IGNORADO_PELO_SCRIPT"; // Este valor será ignorado. O token será obtido dinamicamente.
+const FIREBASE_AUTH_ID_TOKEN = ""; // Este valor será ignorado. O script obterá o token dinamicamente.
 // --- FIM DO CAMPO PARA ID TOKEN ---
 
 //*************************** /CONFIGURACAO ***************************//
@@ -71,7 +76,6 @@ const Edificio_Principal = "HEADQUARTERS_VIEW";
 // --- FUNCOES GLOBAIS (FORA DA IIFE) PARA ACESSO POR OUTRAS FUNCOES GLOBAIS ---
 
 // Inicializa Firebase Client SDK no script (fora das funções para ser global)
-// Isso deve ser feito APENAS UMA VEZ por script.
 var authClient; // Declarado aqui para ser acessível globalmente no script
 try {
     if (typeof firebase !== 'undefined' && FIREBASE_CLIENT_CONFIG && Object.keys(FIREBASE_CLIENT_CONFIG).length > 0) {
@@ -126,30 +130,76 @@ function getBuildingName(buildingId) {
     return `${name} Nv. ${levelPart}`;
 }
 
-// sendBuildingAlert agora retorna uma Promise
-async function sendBuildingAlert(buildingId) { // Adicionado 'async'
-    return new Promise(async (resolve, reject) => { // Adicionado 'async' aqui tambem
+// sendBuildingAlert agora gerencia a obtenção do token e o envio
+async function sendBuildingAlert(buildingId) {
+    return new Promise(async (resolve, reject) => {
         if (!ALERTA_CONSTRUCAO_ATIVADO) {
             console.log('[TW Script] Alerta de construcao desativado nas configuracoes.');
-            return resolve(); // Resolve imediatamente se desativado
+            return resolve();
         }
 
-        // --- Obtem o ID Token FRESCO do Firebase Client ---
-        let idToken;
-        try {
-            // Verifica se authClient esta inicializado e se ha um usuario logado
-            if (typeof authClient === 'undefined' || !authClient.currentUser) {
-                console.error('[TW Script ERROR] Nenhum usuario logado no Firebase no script ou authClient nao inicializado. Login necessario no dashboard.');
-                return reject(new Error("Usuario nao autenticado ou Firebase Client nao inicializado."));
+        let idTokenForAlert; // Este será o ID Token FRESCO final para a requisição
+        const CACHED_ID_TOKEN_KEY = 'cachedFirebaseIdToken';
+        const CACHED_TOKEN_EXPIRY_KEY = 'cachedFirebaseIdTokenExpiry';
+        const now = Date.now();
+
+        // Tentar usar token do cache GM_setValue
+        const cachedToken = GM_getValue(CACHED_ID_TOKEN_KEY);
+        const cachedExpiry = GM_getValue(CACHED_TOKEN_EXPIRY_KEY);
+
+        if (cachedToken && cachedExpiry && now < cachedExpiry - (5 * 60 * 1000)) { // Expira 5min antes
+            idTokenForAlert = cachedToken;
+            console.log('[TW Script] Usando ID Token do cache.');
+        } else {
+            console.log('[TW Script] ID Token expirado ou não encontrado no cache. Obtendo novo...');
+            try {
+                if (!USERSCRIPT_API_KEY || USERSCRIPT_API_KEY === "") {
+                    console.error('[TW Script ERROR] USERSCRIPT_API_KEY nao configurada! Cole a chave gerada no dashboard no script.');
+                    return reject(new Error("Userscript API Key ausente."));
+                }
+                
+                // 1. Pede um Custom Token fresco do seu servidor Render usando a Userscript API Key
+                const tokenResponse = await new Promise((res, rej) => {
+                    GM_xmlhttpRequest({
+                        method: "POST",
+                        url: "https://multcontrol.onrender.com/api/get_fresh_id_token", // NOVA ROTA NO SEU SERVER
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${USERSCRIPT_API_KEY}` // Usa a Userscript API Key aqui
+                        },
+                        // Opcional: pode enviar o UID aqui se o server exigir, mas o server já obterá do token injetado no processo de key generation
+                        // data: JSON.stringify({ uid: 'seu_uid_aqui_se_necessario' }), 
+                        onload: function(response) { res(response); },
+                        onerror: function(error) { rej(error); }
+                    });
+                });
+
+                if (tokenResponse.status !== 200) {
+                    throw new Error(`Falha ao obter Custom Token: Status ${tokenResponse.status}. Resposta: ${tokenResponse.responseText}`);
+                }
+                const customTokenData = JSON.parse(tokenResponse.responseText);
+                const customToken = customTokenData.customToken;
+                
+                // 2. Fazer login no Firebase Client com o Custom Token
+                if (typeof authClient === 'undefined' || !firebase) {
+                    console.error('[TW Script ERROR] Firebase Client SDK ou authClient não está disponível. Não é possível fazer login com Custom Token.');
+                    return reject(new Error("Firebase Client SDK não disponível."));
+                }
+                await authClient.signInWithCustomToken(customToken);
+                console.log('[TW Script] Login com Custom Token bem-sucedido no script.');
+
+                // 3. Obter o ID Token final (curto prazo) e armazenar no cache
+                idTokenForAlert = await authClient.currentUser.getIdToken();
+                const expirationTime = authClient.currentUser.stsTokenManager.expirationTime; // Tempo de expiração em ms
+                GM_setValue(CACHED_ID_TOKEN_KEY, idTokenForAlert);
+                GM_setValue(CACHED_TOKEN_EXPIRY_KEY, expirationTime);
+                console.log('[TW Script] ID Token fresco obtido e salvo no cache.');
+
+            } catch (error) {
+                console.error('[TW Script ERROR] Erro na autenticacao ou obtencao de Custom Token:', error);
+                return reject(new Error("Falha na autenticacao do script."));
             }
-            idToken = await authClient.currentUser.getIdToken(); // OBTÉM TOKEN FRESCO
-            console.log('[TW Script] ID Token fresco obtido com sucesso.');
-        } catch (error) {
-            console.error('[TW Script ERROR] Erro ao obter ID Token fresco no script:', error);
-            return reject(error); // Rejeita se o token nao puder ser obtido
         }
-        // --- FIM: Obtem o ID Token FRESCO ---
-
 
         // Verifica se este mesmo alerta foi enviado muito recentemente
         const currentTime = Date.now();
@@ -166,7 +216,7 @@ async function sendBuildingAlert(buildingId) { // Adicionado 'async'
 
         if (typeof GM_xmlhttpRequest === 'undefined') {
             console.error('[TW Script ERROR] GM_xmlhttpRequest NAO esta definido. Verifique a permissao @grant no cabecalho do script!');
-            return reject(new Error("GM_xmlhttpRequest nao definido.")); // Rejeita se GM_xmlhttpRequest nao estiver disponivel
+            return reject(new Error("GM_xmlhttpRequest nao definido."));
         }
 
         GM_xmlhttpRequest({
@@ -174,23 +224,22 @@ async function sendBuildingAlert(buildingId) { // Adicionado 'async'
             url: ALERT_SERVER_URL,
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${idToken}` // Adiciona o token de autenticacao FRESCO
+                "Authorization": `Bearer ${idTokenForAlert}` // Adiciona o token de autenticacao FRESCO
             },
             data: JSON.stringify({ message: message }),
             onload: function(response) {
                 if (response.status >= 200 && response.status < 300) {
                     console.log("[TW Script] Alerta de construcao enviado com sucesso. Resposta do servidor:", response.responseText);
-                    // Atualiza o estado do ultimo alerta enviado apenas se for bem-sucedido
                     lastBuildingAlertSent = { id: buildingId, timestamp: currentTime };
                     resolve(response); // Resolve a Promise em sucesso
                 } else {
                     console.error(`[TW Script] Erro ao enviar alerta de construcao. Status: ${response.status}. Resposta: ${response.responseText || 'N/A'}`);
-                    reject(new Error(`Erro ao enviar alerta: Status ${response.status}`)); // Rejeita em erro HTTP
+                    reject(new Error(`Erro ao enviar alerta: Status ${response.status}`));
                 }
             },
             onerror: function(error) {
                 console.error("[TW Script] Erro de rede ao enviar alerta de construcao:", error);
-                reject(error); // Rejeita em erro de rede
+                reject(error);
             }
         });
     });
@@ -401,10 +450,10 @@ async function Proxima_Construcao(){ // Adicionado 'async'
 }
 
 function getConstrucao_proximo_edificio() {
-    let Construcao_Edificios_Serie = getConstrucao_Edificios_Serie();
+    let Construcao_Edifcios_Serie = getConstrucao_Edifcios_Serie();
     let instituir = null;
-    for (let i = 0; i < Construcao_Edificios_Serie.length; i++) {
-        var proximoId = Construcao_Edificios_Serie[i];
+    for (let i = 0; i < Construcao_Edifcios_Serie.length; i++) {
+        var proximoId = Construcao_Edifcios_Serie[i];
         let proximo_edificio = document.getElementById(proximoId);
 
         if (proximo_edificio) {
@@ -434,7 +483,7 @@ function getConstrucao_proximo_edificio() {
     return instituir;
 }
 
-function getConstrucao_Edificios_Serie() {
+function getConstrucao_Edifcios_Serie() {
     // A ordem de construcao foi atualizada com base na sua prioridade.
     const Sequencia_Construcao = [
         // Foco em recursos iniciais e Edificio Principal
@@ -499,7 +548,7 @@ function getConstrucao_Edificios_Serie() {
         "main_buildlink_wood_11", // Construcao Madeira 11
         "main_buildlink_stone_11", // Construcao Argila 11
         "main_buildlink_wood_12", // Construcao Madeira 12
-        "main_buildlink_stone_12", // Construcao Argila 12
+        "main_buildlink_stone_12", // Construcao Argila 22
         "main_buildlink_storage_7", // Construcao Armazem 7
         "main_buildlink_storage_8", // Construcao Armazem 8
         "main_buildlink_iron_8", // Construcao Ferro 8

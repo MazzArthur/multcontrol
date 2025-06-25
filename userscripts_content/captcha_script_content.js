@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         Alerta de Captcha (FUSAO FINAL E LIMPISSIMA)
-// @version      3.3 // Versao com ID Token para alertas segmentados (Gerado por MULTCONTROL)
+// @version      3.4 // Versao com Userscript API Key para autenticacao automatica
 // @description  Detecta Captcha, alerta via web/nativa e realiza cliques no Tribal Wars.
 // @include      http*://*.*game.php*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_notification
-// @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js    <-- ADICIONADO
-// @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js   <-- ADICIONADO
-// @connect      multcontrol.onrender.com  <-- ADICIONADO
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
+// @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js
+// @connect      multcontrol.onrender.com
 // ==/UserScript==
 
 (function() {
@@ -18,16 +20,20 @@
     console.log("----------------------------------------------------------------------------------");
 
     // --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---
-    const FIREBASE_CLIENT_CONFIG = {}; // Será preenchido dinamicamente pelo servidor
+    // Será preenchido dinamicamente pelo servidor
+    const FIREBASE_CLIENT_CONFIG = {};
     // --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG --
 
+    // --- CAMPO PARA USERSCRIPT API KEY (Gerada no Dashboard MULTCONTROL) ---
+    const USERSCRIPT_API_KEY = ""; // Esta será a chave única do usuário injetada.
+    // --- FIM DO CAMPO PARA USERSCRIPT API KEY --
+
     // --- CAMPO PARA ID TOKEN DO USUARIO (Gerado pelo Dashboard MULTCONTROL) ---
-    const FIREBASE_AUTH_ID_TOKEN = "TOKEN_EXEMPLO_IGNORADO_PELO_SCRIPT"; // Este valor será ignorado.
-    // --- FIM DO CAMPO PARA ID TOKEN ---
+    const FIREBASE_AUTH_ID_TOKEN = ""; // Este valor será ignorado.
 
-    const ALERT_SERVER_URL = "https://multcontrol.onrender.com/alert"; // URL do seu servidor de alertas
+    const ALERT_SERVER_URL = "https://multcontrol.onrender.com/alert";
 
-    // --- CONFIGURAÇÕES ADICIONAIS PARA O ALERTA DE CAPTCHA (se necessário) ---
+    // --- CONFIGURAÇÕES ADICIONAIS PARA O ALERTA DE CAPTCHA ---
     let lastCaptchaAlertSent = { id: null, timestamp: 0 };
     const ALERT_COOLDOWN_MS = 10000; // 10 segundos de cooldown
 
@@ -46,41 +52,92 @@
     }
 
 
-    // sendAlert agora é async
-    async function sendAlert(message) { // Adicionado 'async'
-        // --- Obtem o ID Token FRESCO do Firebase Client ---
-        let idToken;
-        try {
-            if (typeof authClient === 'undefined' || !authClient.currentUser) {
-                console.error('[Tampermonkey ERROR] Nenhum usuário logado no Firebase no script. Login necessário no dashboard.');
-                return; // Não tente enviar alerta se não há usuário logado
+    async function sendAlert(message) { // Funcao para enviar alerta
+        return new Promise(async (resolve, reject) => {
+            let idTokenFinalForRequest;
+            const CACHED_ID_TOKEN_KEY = 'cachedFirebaseIdToken_captcha'; // Chave única para este script
+            const CACHED_TOKEN_EXPIRY_KEY = 'cachedFirebaseIdTokenExpiry_captcha';
+            const now = Date.now();
+
+            const cachedToken = GM_getValue(CACHED_ID_TOKEN_KEY);
+            const cachedExpiry = GM_getValue(CACHED_TOKEN_EXPIRY_KEY);
+
+            if (cachedToken && cachedExpiry && now < cachedExpiry - (5 * 60 * 1000)) { // Expira 5min antes
+                idTokenFinalForRequest = cachedToken;
+                console.log('[TW Script - Captcha] Usando ID Token do cache.');
+            } else {
+                console.log('[TW Script - Captcha] ID Token expirado ou não encontrado no cache. Obtendo novo...');
+                try {
+                    if (!USERSCRIPT_API_KEY || USERSCRIPT_API_KEY === "") {
+                        console.error('[TW Script - Captcha ERROR] USERSCRIPT_API_KEY nao configurada! Copie o script do dashboard APOS LOGIN.');
+                        return reject(new Error("Userscript API Key ausente."));
+                    }
+                    
+                    const tokenResponse = await new Promise((res, rej) => {
+                        GM_xmlhttpRequest({
+                            method: "POST",
+                            url: "https://multcontrol.onrender.com/api/get_fresh_id_token",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${USERSCRIPT_API_KEY}`
+                            },
+                            onload: function(response) { res(response); },
+                            onerror: function(error) { rej(error); }
+                        });
+                    });
+
+                    if (tokenResponse.status !== 200) {
+                        throw new Error(`Falha ao obter Custom Token: Status ${tokenResponse.status}. Resposta: ${tokenResponse.responseText}`);
+                    }
+                    const customTokenData = JSON.parse(tokenResponse.responseText);
+                    const customToken = customTokenData.customToken;
+                    
+                    if (typeof authClient === 'undefined' || !firebase) {
+                        console.error('[TW Script - Captcha ERROR] Firebase Client SDK ou authClient não está disponível. Não é possível fazer login com Custom Token.');
+                        return reject(new Error("Firebase Client SDK não disponível."));
+                    }
+                    await authClient.signInWithCustomToken(customToken);
+                    console.log('[TW Script - Captcha] Login com Custom Token bem-sucedido no script.');
+
+                    idTokenFinalForRequest = await authClient.currentUser.getIdToken();
+                    const expirationTime = authClient.currentUser.stsTokenManager.expirationTime;
+                    GM_setValue(CACHED_ID_TOKEN_KEY, idTokenFinalForRequest);
+                    GM_setValue(CACHED_TOKEN_EXPIRY_KEY, expirationTime);
+                    console.log('[TW Script - Captcha] ID Token fresco obtido e salvo no cache.');
+
+                } catch (error) {
+                    console.error('[TW Script - Captcha ERROR] Erro na autenticacao ou obtencao de Custom Token:', error);
+                    return reject(new Error("Falha na autenticacao do script."));
+                }
             }
-            idToken = await authClient.currentUser.getIdToken(); // OBTÉM TOKEN FRESCO
-            console.log('[Tampermonkey] ID Token fresco obtido com sucesso.');
-        } catch (error) {
-            console.error('[Tampermonkey ERROR] Erro ao obter ID Token fresco no script:', error);
-            return; // Não tente enviar alerta se o token não puder ser obtido
-        }
-        // --- FIM: Obtem o ID Token FRESCO ---
 
-        // Mensagem para o servidor (SEM ACENTOS, SEM EMOJI)
-        console.log(`[Tampermonkey] Tentando enviar alerta: "${message}" para ${ALERT_SERVER_URL}`);
+            const currentTime = Date.now();
+            const alertId = 'captcha_alert';
+            if (lastCaptchaAlertSent.id === alertId && (currentTime - lastCaptchaAlertSent.timestamp < ALERT_COOLDOWN_MS)) {
+                console.log(`[TW Script - Captcha] Alerta de captcha ignorado: cooldown ativo.`);
+                return resolve();
+            }
 
-        if (typeof GM_xmlhttpRequest === 'undefined') {
-            console.error('[Tampermonkey ERROR] GM_xmlhttpRequest NAO está definido. Verifique a permissão @grant no cabeçalho do script!');
-            return;
-        }
+            // Mensagem para o servidor
+            const fullMessage = `🚨⚠️ CAPTCHA NECESSARIO! Mensagem: ${message}`;
+            console.log(`[TW Script - Captcha] Tentando enviar alerta: "${fullMessage}" para ${ALERT_SERVER_URL}`);
 
-        GM_xmlhttpRequest({
-            method: "POST",
-            url: ALERT_SERVER_URL,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${idToken}` // Use o token FRESCO
-            },
-            data: JSON.stringify({ message: message }),
-            onload: function(response) { console.log("[Tampermonkey] Alerta enviado com sucesso.", response.responseText); },
-            onerror: function(error) { console.error("[Tampermonkey] Erro de rede ao enviar alerta.", error); }
+            if (typeof GM_xmlhttpRequest === 'undefined') {
+                console.error('[TW Script - Captcha ERROR] GM_xmlhttpRequest NAO está definido. Verifique a permissão @grant no cabeçalho do script!');
+                return reject(new Error("GM_xmlhttpRequest nao definido."));
+            }
+
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: ALERT_SERVER_URL,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${idTokenFinalForRequest}`
+                },
+                data: JSON.stringify({ message: fullMessage }),
+                onload: function(response) { console.log("[Tampermonkey] Alerta enviado com sucesso.", response.responseText); resolve(response); },
+                onerror: function(error) { console.error("[Tampermonkey] Erro de rede ao enviar alerta.", error); reject(error); }
+            });
         });
     }
 
@@ -93,7 +150,6 @@
     }
 
     function showNativeNotification(title, body, icon = "https://www.google.com/favicon.ico") {
-        // Notificação nativa pode ter emojis/acentos (exibição local)
         console.log(`[Tampermonkey] Tentando mostrar notificacao nativa: "${title}" - "${body}"`);
         if (!("Notification" in window)) {
             console.warn("[Tampermonkey] Este navegador nao suporta notificacoes de desktop.");
@@ -118,12 +174,10 @@
         if (initialButton) {
             clearInterval(captchaCheckInterval);
             const nickname = getNickname();
-            // MENSAGEM PARA O SERVIDOR (SEM ACENTOS, SEM EMOJI)
-            const captchaMessage = `CAPTCHA NECESSARIO! A conta "${nickname}" precisa resolver um Captcha agora!`;
+            const captchaMessage = `A conta "${nickname}" precisa resolver um Captcha agora!`;
             
             await sendAlert(captchaMessage); // Adicionado 'await' aqui
             
-            // Notificação nativa (PODE TER EMOJI e ACENTOS)
             showNativeNotification("⚠️ Acao Necessaria! ⚠️", `A conta "${nickname}" precisa resolver um Captcha!`);
             initialButton.click();
             setTimeout(function() {

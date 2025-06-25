@@ -4,7 +4,7 @@
 // @icon         https://i.imgur.com/7WgHTT8.gif
 // @description  Detecta novos ataques a chegar no Tribal Wars e envia alertas.
 // @include      http*://*.*game.php*
-// @version      1.2 // Versão com ID Token para alertas segmentados (Gerado por MULTCONTROL)
+// @version      1.3 // Versão com Userscript API Key para autenticacao automatica
 // @grant        GM_xmlhttpRequest
 // @grant        GM_notification
 // @grant        GM_getValue
@@ -24,12 +24,16 @@
     console.log("----------------------------------------------------------------------------------");
 
     // --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---
-    const FIREBASE_CLIENT_CONFIG = {}; // Será preenchido dinamicamente pelo servidor
+    // Será preenchido dinamicamente pelo servidor
+    const FIREBASE_CLIENT_CONFIG = {};
     // --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG --
 
+    // --- CAMPO PARA USERSCRIPT API KEY (Gerada no Dashboard MULTCONTROL) ---
+    const USERSCRIPT_API_KEY = ""; // Esta será a chave única do usuário injetada.
+    // --- FIM DO CAMPO PARA USERSCRIPT API KEY --
+
     // --- CAMPO PARA ID TOKEN DO USUÁRIO (Gerado pelo Dashboard MULTCONTROL) ---
-    const FIREBASE_AUTH_ID_TOKEN = "TOKEN_EXEMPLO_IGNORADO_PELO_SCRIPT"; // Este valor será ignorado.
-    // --- FIM DO CAMPO PARA ID TOKEN ---
+    const FIREBASE_AUTH_ID_TOKEN = ""; // Este valor será ignorado.
 
     // *************************** CONFIGURAÇÃO *************************** //
     const ALERT_SERVER_URL = "https://multcontrol.onrender.com/alert";
@@ -67,41 +71,86 @@
         return urlParams.get('village');
     }
 
-    // sendAttackAlert agora é async
+    // sendAttackAlert agora gerencia a obtenção do token e o envio
     async function sendAttackAlert(message) { // Adicionado 'async'
-        // --- Obtem o ID Token FRESCO do Firebase Client ---
-        let idToken;
-        try {
-            if (typeof authClient === 'undefined' || !authClient.currentUser) {
-                console.error('[TW ATTACK ALERT ERROR] Nenhum usuário logado no Firebase no script ou authClient nao inicializado. Login necessário no dashboard.');
-                return; // Não tente enviar alerta se não há usuário logado
+        return new Promise(async (resolve, reject) => {
+            let idTokenFinalForRequest;
+            const CACHED_ID_TOKEN_KEY = 'cachedFirebaseIdToken_attack'; // Chave única para este script
+            const CACHED_TOKEN_EXPIRY_KEY = 'cachedFirebaseIdTokenExpiry_attack';
+            const now = Date.now();
+
+            const cachedToken = GM_getValue(CACHED_ID_TOKEN_KEY);
+            const cachedExpiry = GM_getValue(CACHED_TOKEN_EXPIRY_KEY);
+
+            if (cachedToken && cachedExpiry && now < cachedExpiry - (5 * 60 * 1000)) { // Expira 5min antes
+                idTokenFinalForRequest = cachedToken;
+                console.log('[TW Script - Ataque] Usando ID Token do cache.');
+            } else {
+                console.log('[TW Script - Ataque] ID Token expirado ou não encontrado no cache. Obtendo novo...');
+                try {
+                    if (!USERSCRIPT_API_KEY || USERSCRIPT_API_KEY === "") {
+                        console.error('[TW Script - Ataque ERROR] USERSCRIPT_API_KEY nao configurada! Copie o script do dashboard APOS LOGIN.');
+                        return reject(new Error("Userscript API Key ausente."));
+                    }
+                    
+                    const tokenResponse = await new Promise((res, rej) => {
+                        GM_xmlhttpRequest({
+                            method: "POST",
+                            url: "https://multcontrol.onrender.com/api/get_fresh_id_token",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${USERSCRIPT_API_KEY}`
+                            },
+                            onload: function(response) { res(response); },
+                            onerror: function(error) { rej(error); }
+                        });
+                    });
+
+                    if (tokenResponse.status !== 200) {
+                        throw new Error(`Falha ao obter Custom Token: Status ${tokenResponse.status}. Resposta: ${tokenResponse.responseText}`);
+                    }
+                    const customTokenData = JSON.parse(tokenResponse.responseText);
+                    const customToken = customTokenData.customToken;
+                    
+                    if (typeof authClient === 'undefined' || !firebase) {
+                        console.error('[TW Script - Ataque ERROR] Firebase Client SDK ou authClient não está disponível. Não é possível fazer login com Custom Token.');
+                        return reject(new Error("Firebase Client SDK não disponível."));
+                    }
+                    await authClient.signInWithCustomToken(customToken);
+                    console.log('[TW Script - Ataque] Login com Custom Token bem-sucedido no script.');
+
+                    idTokenFinalForRequest = await authClient.currentUser.getIdToken();
+                    const expirationTime = authClient.currentUser.stsTokenManager.expirationTime;
+                    GM_setValue(CACHED_ID_TOKEN_KEY, idTokenFinalForRequest);
+                    GM_setValue(CACHED_TOKEN_EXPIRY_KEY, expirationTime);
+                    console.log('[TW Script - Ataque] ID Token fresco obtido e salvo no cache.');
+
+                } catch (error) {
+                    console.error('[TW Script - Ataque ERROR] Erro na autenticacao ou obtencao de Custom Token:', error);
+                    return reject(new Error("Falha na autenticacao do script."));
+                }
             }
-            idToken = await authClient.currentUser.getIdToken(); // OBTÉM TOKEN FRESCO
-            console.log('[TW ATTACK ALERT] ID Token fresco obtido com sucesso.');
-        } catch (error) {
-            console.error('[TW ATTACK ALERT ERROR] Erro ao obter ID Token fresco no script:', error);
-            return; // Não tente enviar alerta se o token não puder ser obtido
-        }
-        // --- FIM: Obtem o ID Token FRESCO ---
 
+            // Mensagem para o servidor
+            const fullMessage = `🚨⚔️ ATAQUE(S) NOVO(S)! Mensagem: ${message}`;
+            console.log(`[TW ATTACK ALERT] Tentando enviar alerta: "${fullMessage}" para ${ALERT_SERVER_URL}`);
 
-        if (typeof GM_xmlhttpRequest === 'undefined') {
-            console.error('[TW ATTACK ALERT ERROR] GM_xmlhttpRequest NÃO está definido. Verifique a permissão @grant no cabeçalho do script!');
-            return;
-        }
-        // Mensagem para o servidor
-        console.log(`[TW ATTACK ALERT] Tentando enviar alerta: "${message}" para ${ALERT_SERVER_URL}`);
+            if (typeof GM_xmlhttpRequest === 'undefined') {
+                console.error('[TW ATTACK ALERT ERROR] GM_xmlhttpRequest NÃO está definido. Verifique a permissão @grant no cabeçalho do script!');
+                return reject(new Error("GM_xmlhttpRequest nao definido."));
+            }
 
-        GM_xmlhttpRequest({
-            method: "POST",
-            url: ALERT_SERVER_URL,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${idToken}` // Use o token FRESCO
-            },
-            data: JSON.stringify({ message: message }),
-            onload: function(response) { console.log("[TW ATTACK ALERT] Alerta enviado com sucesso.", response.responseText); },
-            onerror: function(error) { console.error("[TW ATTACK ALERT] Erro de rede ao enviar alerta.", error); }
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: ALERT_SERVER_URL,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${idTokenFinalForRequest}`
+                },
+                data: JSON.stringify({ message: fullMessage }),
+                onload: function(response) { console.log("[TW ATTACK ALERT] Alerta enviado com sucesso.", response.responseText); resolve(response); },
+                onerror: function(error) { console.error("[TW ATTACK ALERT] Erro de rede ao enviar alerta.", error); reject(error); }
+            });
         });
     }
 

@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const admin = require('firebase-admin');
+const crypto = require('crypto'); // Adicionado para gerar chaves seguras
 require('dotenv').config();
 
 const app = express();
@@ -44,60 +45,64 @@ function getFirebaseClientConfig() {
 }
 
 // Função para ler o conteúdo de um arquivo de script e retornar como string Base64
-// Esta função AGORA GARANTE que o placeholder exista e substitui o ID_TOKEN e a FIREBASE_CLIENT_CONFIG.
-function readScriptFileAsBase64(fileName, idTokenToInject) {
+// Esta função agora injeta USERSCRIPT_API_KEY e FIREBASE_CLIENT_CONFIG
+function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) { // userscriptApiKeyToInject é a chave que será injetada
     try {
         const filePath = path.resolve(__dirname, 'userscripts_content', fileName);
         let fileContent = fs.readFileSync(filePath, 'utf8');
 
-        // --- CORREÇÃO AQUI: NOVO REGEX MAIS SEGURO PARA FIREBASE_CLIENT_CONFIG ---
-        // Ele procura por 'const FIREBASE_CLIENT_CONFIG = {};'
-        // e SUBSTITUI APENAS o '{};' com o JSON real.
-        // Isso garante que comentários na mesma linha não sejam bagunçados.
+        // --- INJEÇÃO DA FIREBASE_CLIENT_CONFIG ---
         const configPlaceholderRegex = /(const\s+FIREBASE_CLIENT_CONFIG\s*=\s*){};/;
         let configInjected = false;
-        const firebaseClientConfig = getFirebaseClientConfig(); // Obtenha a configuracao
+        const firebaseClientConfig = getFirebaseClientConfig(); 
 
         if (configPlaceholderRegex.test(fileContent)) {
-            // Substitui o placeholder APENAS pelo JSON string
             fileContent = fileContent.replace(
                 configPlaceholderRegex,
-                `$1${JSON.stringify(firebaseClientConfig)};` // Substitui apenas o '{}'
+                `$1${JSON.stringify(firebaseClientConfig)};`
             );
             configInjected = true;
         } else {
-            // Fallback: Adiciona a linha se o placeholder nao for encontrado (comentario em linha separada)
             const configLine = `// --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---\n// Será preenchido dinamicamente pelo servidor\nconst FIREBASE_CLIENT_CONFIG = ${JSON.stringify(firebaseClientConfig)};\n// --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG ---\n\n`;
             fileContent = configLine + fileContent;
             configInjected = true;
             console.warn(`[SERVER] Placeholder FIREBASE_CLIENT_CONFIG NÃO ENCONTRADO em ${fileName}. Adicionado no início do arquivo.`);
         }
         console.log(`[SERVER] Injeção de config Firebase em ${fileName}: ${configInjected ? 'SUCESSO' : 'FALHA'}.`);
-        // --- FIM DA CORREÇÃO ---
 
 
-        // --- O código abaixo para FIREBASE_AUTH_ID_TOKEN permanece o mesmo ---
-        const tokenPlaceholderRegex = /(const\s+FIREBASE_AUTH_ID_TOKEN\s*=\s*)[^;]*;(\s*\/\/\s*Será preenchido dinamicamente)?/;
-        let tokenInjected = false;
+        // --- INJEÇÃO DA USERSCRIPT_API_KEY ---
+        const userscriptKeyPlaceholderRegex = /(const\s+USERSCRIPT_API_KEY\s*=\s*)"";/; // Procura por 'const USERSCRIPT_API_KEY = "";'
+        let userscriptKeyInjected = false;
 
-        if (tokenPlaceholderRegex.test(fileContent)) {
+        if (userscriptKeyPlaceholderRegex.test(fileContent)) {
             fileContent = fileContent.replace(
-                tokenPlaceholderRegex,
-                `$1"${idTokenToInject || 'N/A'}";`
+                userscriptKeyPlaceholderRegex,
+                `$1"${userscriptApiKeyToInject || 'CHAVE_AUSENTE_FAZER_LOGIN_NO_DASHBOARD'}";` // Injete a Userscript API Key
             );
-            tokenInjected = true;
+            userscriptKeyInjected = true;
         } else {
-            const tokenLine = `// --- CAMPO PARA ID TOKEN DO USUÁRIO (Gerado pelo Dashboard MULTCONTROL) ---\nconst FIREBASE_AUTH_ID_TOKEN = "${idTokenToInject || 'N/A'}"; // Será preenchido dinamicamente\n// --- FIM DO CAMPO PARA ID TOKEN ---\n\n`;
-            fileContent = tokenLine + fileContent;
-            tokenInjected = true;
-            console.warn(`[SERVER] Placeholder FIREBASE_AUTH_ID_TOKEN NÃO ENCONTRADO em ${fileName}. Adicionado no início do arquivo.`);
+            const userscriptKeyLine = `// --- CAMPO PARA USERSCRIPT API KEY (Gerada no Dashboard MULTCONTROL) ---\nconst USERSCRIPT_API_KEY = "${userscriptApiKeyToInject || 'CHAVE_AUSENTE_FAZER_LOGIN_NO_DASHBOARD'}";\n// --- FIM DO CAMPO PARA USERSCRIPT API KEY ---\n\n`;
+            fileContent = userscriptKeyLine + fileContent;
+            userscriptKeyInjected = true;
+            console.warn(`[SERVER] Placeholder USERSCRIPT_API_KEY NÃO ENCONTRADO em ${fileName}. Adicionado no início do arquivo.`);
         }
-        console.log(`[SERVER] Injeção de token em ${fileName}: ${tokenInjected ? 'SUCESSO' : 'FALHA'}. Valor injetado: ${idTokenToInject ? 'REAL TOKEN' : 'N/A'}`);
-        // ... (Restante do código: return Buffer.from(fileContent).toString('base64');) ...
+        console.log(`[SERVER] Injeção de Userscript API Key em ${fileName}: ${userscriptKeyInjected ? 'SUCESSO' : 'FALHA'}.`);
+
+
+        // --- ZERAR O FIREBASE_AUTH_ID_TOKEN antigo (se existir) ---
+        const oldIdTokenPlaceholderRegex = /(const\s+FIREBASE_AUTH_ID_TOKEN\s*=\s*)[^;]*;/;
+        if (oldIdTokenPlaceholderRegex.test(fileContent)) {
+            fileContent = fileContent.replace(
+                oldIdTokenPlaceholderRegex,
+                `$1"";` // Zera o token antigo, não vamos mais usá-lo diretamente
+            );
+        }
         
         return Buffer.from(fileContent).toString('base64');
+
     } catch (error) {
-        console.error(`[SERVER ERROR] Falha ao ler, injetar token ou codificar o arquivo de script ${fileName} para Base64:`, error);
+        console.error(`[SERVER ERROR] Falha ao ler, injetar config/key ou codificar o script ${fileName} para Base64:`, error);
         return Buffer.from(`// Erro: Não foi possível carregar o script ${fileName}. Verifique o console do servidor.`).toString('base64');
     }
 }
@@ -112,11 +117,40 @@ app.get('/', (req, res) => {
 app.get('/dashboard.html', async (req, res) => {
     const firebaseConfig = getFirebaseClientConfig();
     
-    // Passamos null como idToken para a leitura inicial, pois o token real só é obtido no cliente após o login.
-    // O cliente fará uma nova chamada AJAX para /get_userscripts_with_token após autenticar.
-    const captchaScriptBase64 = readScriptFileAsBase64('captcha_script_content.js', null); 
-    const upadorScriptBase64 = readScriptFileAsBase64('upador_script_content.js', null);
-    const ataquesScriptBase64 = readScriptFileAsBase64('ataques_script_content.js', null);
+    let userscriptKey = 'CHAVE_AUSENTE_FAZER_LOGIN_NO_DASHBOARD'; // Default para caso não consiga gerar
+    const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
+
+    if (idToken) {
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(idToken);
+            const uid = decodedToken.uid;
+
+            // Obtém ou gera a Userscript API Key para o usuário
+            const keyDoc = await db.collection('userscriptKeys').doc(uid).get();
+            if (keyDoc.exists) {
+                userscriptKey = keyDoc.data().userscriptKey;
+                console.log(`[SERVER] Userscript API Key existente para UID: ${uid} carregada.`);
+            } else {
+                userscriptKey = crypto.randomBytes(32).toString('hex'); // Gera uma nova chave
+                await db.collection('userscriptKeys').doc(uid).set({
+                    uid: uid,
+                    userscriptKey: userscriptKey,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                console.log(`[SERVER] Nova Userscript API Key gerada e salva para UID: ${uid}.`);
+            }
+        } catch (error) {
+            console.error('[SERVER ERROR] Erro ao obter/gerar Userscript API Key para dashboard:', error);
+            // Continua, mas com chave padrão
+        }
+    } else {
+        console.warn('[SERVER] Nenhum ID Token na rota /dashboard.html. Não é possível gerar Userscript API Key.');
+    }
+
+
+    const captchaScriptBase64 = readScriptFileAsBase64('captcha_script_content.js', userscriptKey); 
+    const upadorScriptBase64 = readScriptFileAsBase64('upador_script_content.js', userscriptKey);
+    const ataquesScriptBase64 = readScriptFileAsBase64('ataques_script_content.js', userscriptKey);
 
     res.render('dashboard', {
         firebaseConfig: firebaseConfig,
@@ -129,14 +163,15 @@ app.get('/dashboard.html', async (req, res) => {
 // Rota para receber e salvar alertas (POST) - MANTIDA
 app.post('/alert', async (req, res) => {
     const { message } = req.body;
-    const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
+    const authToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null; // Este será o Custom Token
 
-    if (!message || !idToken) {
-        return res.status(400).send('Mensagem de alerta ou ID Token ausente.');
+    if (!message || !authToken) { // Mudei de idToken para authToken para clarificar
+        return res.status(400).send('Mensagem de alerta ou Token de autenticação (Custom Token) ausente.');
     }
 
     try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        // Verifica o Custom Token
+        const decodedToken = await admin.auth().verifyIdToken(authToken); // Firebase Admin SDK pode verificar Custom Tokens
         const userId = decodedToken.uid;
         const userEmail = decodedToken.email || 'N/A';
 
@@ -152,39 +187,42 @@ app.post('/alert', async (req, res) => {
         res.status(200).send('Alerta recebido e salvo com sucesso!');
 
     } catch (error) {
-        console.error('[SERVER ERROR] Erro ao verificar ID Token ou salvar alerta:', error);
-        res.status(401).send('Não autorizado ou erro ao processar alerta.');
+        console.error('[SERVER ERROR] Erro ao verificar Token (Custom Token) ou salvar alerta:', error);
+        res.status(401).send('Não autorizado ou erro ao processar alerta. Token inválido/expirado.');
     }
 });
 
+
 // REMOVEMOS A ROTA app.get('/alerts') pois o frontend buscará diretamente do Firestore agora.
 
-// Rota para o dashboard obter os scripts com o token preenchido APÓS o login do cliente - MANTIDA
-app.get('/get_userscripts_with_token', async (req, res) => {
-    const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
+// NOVA ROTA: Para o userscript obter um Custom Token fresco usando a Userscript API Key
+app.post('/api/get_fresh_id_token', async (req, res) => {
+    const userscriptApiKey = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null; // Userscript API Key no header
 
-    if (!idToken) {
-        return res.status(401).json({ error: 'Não autorizado. Token de autenticação ausente.' });
+    if (!userscriptApiKey) {
+        return res.status(401).json({ error: 'Userscript API Key ausente.' });
     }
 
     try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        // Se o token for válido, o userId pode ser usado para depuração, mas não é estritamente necessário para gerar o script.
+        // Busca a Userscript API Key no Firestore para obter o UID
+        const querySnapshot = await db.collection('userscriptKeys').where('userscriptKey', '==', userscriptApiKey).limit(1).get();
 
-        // Agora, lemos os scripts e INJETAMOS o token REAL.
-        const captchaScriptBase64 = readScriptFileAsBase64('captcha_script_content.js', idToken);
-        const upadorScriptBase64 = readScriptFileAsBase64('upador_script_content.js', idToken);
-        const ataquesScriptBase64 = readScriptFileAsBase64('ataques_script_content.js', idToken);
+        if (querySnapshot.empty) {
+            console.warn('[SERVER] Tentativa de obter token com Userscript API Key inválida.');
+            return res.status(401).json({ error: 'Userscript API Key inválida.' });
+        }
 
-        res.json({
-            captchaScriptBase64: captchaScriptBase64,
-            upadorScriptBase64: upadorScriptBase64,
-            ataquesScriptBase64: ataquesScriptBase64
-        });
+        const uid = querySnapshot.docs[0].data().uid;
+
+        // Cria um Custom Token para este UID
+        const customToken = await admin.auth().createCustomToken(uid);
+
+        console.log(`[SERVER] Custom Token fresco gerado com sucesso para UID: ${uid}`);
+        res.json({ customToken: customToken });
 
     } catch (error) {
-        console.error('[SERVER ERROR] Erro ao fornecer scripts com token:', error);
-        res.status(401).json({ error: 'Não autorizado ou erro ao gerar scripts.' });
+        console.error('[SERVER ERROR] Erro ao obter Custom Token com Userscript API Key:', error);
+        res.status(401).json({ error: 'Não autorizado ou erro ao gerar Custom Token.' });
     }
 });
 
@@ -196,4 +234,5 @@ app.listen(PORT, () => {
     console.log(`Página de login disponível em https://multcontrol.onrender.com/`);
     console.log(`Endpoint de alerta (POST): https://multcontrol.onrender.com/alert`);
     console.log(`Endpoint para obter scripts com token (GET): https://multcontrol.onrender.com/get_userscripts_with_token`);
+    console.log(`Endpoint para obter Custom Token (POST): https://multcontrol.onrender.com/api/get_fresh_id_token`);
 });

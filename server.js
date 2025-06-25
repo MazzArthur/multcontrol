@@ -22,14 +22,14 @@ app.use(express.json());
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
-            defaultSrc: ["'self'"], // Permite carregar recursos do próprio domínio
-            scriptSrc: ["'self'", "https://www.gstatic.com", "https://apis.google.com"], // Permite scripts do próprio domínio e do Firebase
-            connectSrc: ["'self'", "https://multcontrol.onrender.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com"], // Permite requisições (fetch, XHR) para seu domínio e Firebase Auth/Firestore
-            imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://www.google.com", "https://dsbr.innogamescdn.com"], // Permite imagens de data URLs, imgur, google e tribalwars CDN
-            styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"], // Permite estilos do próprio domínio, Google Fonts e estilos inline
-            fontSrc: ["'self'", "https://fonts.gstatic.com"], // Permite fontes do próprio domínio e Google Fonts
-            objectSrc: ["'none'"], // Proíbe <object>, <embed>
-            upgradeInsecureRequests: [], // Redireciona HTTP para HTTPS automaticamente
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://www.gstatic.com", "https://apis.google.com", "'unsafe-inline'"], // ADICIONADO: 'unsafe-inline'
+            connectSrc: ["'self'", "https://multcontrol.onrender.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com"],
+            imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://www.google.com", "https://dsbr.innogamescdn.com"],
+            styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"], // ADICIONADO: 'unsafe-inline' para o bloco <style>
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
         },
     },
 }));

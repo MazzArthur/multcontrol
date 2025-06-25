@@ -18,7 +18,7 @@
     const FIREBASE_AUTH_ID_TOKEN = "N/A"; // Sera preenchido dinamicamente
     // --- FIM DO CAMPO PARA ID TOKEN ---
 
-    const ALERT_SERVER_URL = "http://localhost:3000/alert";
+    const ALERT_SERVER_URL = "https://multcontrol.onrender.com/alert";
 
     function sendAlert(message) {
         if (!FIREBASE_AUTH_ID_TOKEN || FIREBASE_AUTH_ID_TOKEN === "N/A") {

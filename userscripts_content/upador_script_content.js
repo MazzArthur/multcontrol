@@ -189,8 +189,9 @@ async function sendBuildingAlert(buildingId) {
                 console.log('[TW Script] Login com Custom Token bem-sucedido no script.');
 
                 // 3. Obter o ID Token final (curto prazo) e armazenar no cache
-                idTokenForAlert = await authClient.currentUser.getIdToken();
-                const expirationTime = authClient.currentUser.stsTokenManager.expirationTime; // Tempo de expiração em ms
+                const idTokenResult = await authClient.currentUser.getIdTokenResult(); // Obtém o objeto completo do token
+                idTokenForAlert = idTokenResult.token; // O token JWT real
+                const expirationTime = idTokenResult.expirationTime; // Tempo de expiração em ms
                 GM_setValue(CACHED_ID_TOKEN_KEY, idTokenForAlert);
                 GM_setValue(CACHED_TOKEN_EXPIRY_KEY, expirationTime);
                 console.log('[TW Script] ID Token fresco obtido e salvo no cache.');

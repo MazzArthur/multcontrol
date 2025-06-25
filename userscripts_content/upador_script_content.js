@@ -401,10 +401,10 @@ async function Proxima_Construcao(){ // Adicionado 'async'
 }
 
 function getConstrucao_proximo_edificio() {
-    let Construcao_Edifcios_Serie = getConstrucao_Edifcios_Serie();
+    let Construcao_Edificios_Serie = getConstrucao_Edificios_Serie();
     let instituir = null;
-    for (let i = 0; i < Construcao_Edifcios_Serie.length; i++) {
-        var proximoId = Construcao_Edifcios_Serie[i];
+    for (let i = 0; i < Construcao_Edificios_Serie.length; i++) {
+        var proximoId = Construcao_Edificios_Serie[i];
         let proximo_edificio = document.getElementById(proximoId);
 
         if (proximo_edificio) {
@@ -434,7 +434,7 @@ function getConstrucao_proximo_edificio() {
     return instituir;
 }
 
-function getConstrucao_Edifcios_Serie() {
+function getConstrucao_Edificios_Serie() {
     // A ordem de construcao foi atualizada com base na sua prioridade.
     const Sequencia_Construcao = [
         // Foco em recursos iniciais e Edificio Principal

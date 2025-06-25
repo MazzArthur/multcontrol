@@ -44,36 +44,52 @@ function getFirebaseClientConfig() {
 }
 
 // Função para ler o conteúdo de um arquivo de script e retornar como string Base64
-// Esta função AGORA GARANTE que o placeholder exista e substitui o ID_TOKEN.
+// Esta função AGORA GARANTE que o placeholder exista e substitui o ID_TOKEN e a FIREBASE_CLIENT_CONFIG.
 function readScriptFileAsBase64(fileName, idTokenToInject) {
     try {
         const filePath = path.resolve(__dirname, 'userscripts_content', fileName);
         let fileContent = fs.readFileSync(filePath, 'utf8');
 
-        // Regex flexível para encontrar a linha do placeholder:
-        // Procura por "const FIREBASE_AUTH_ID_TOKEN = "N/A";" (com ou sem comentários, espaços, aspas)
-        // Usa `[^;]*` para pegar qualquer coisa antes do ; (útil se o N/A for diferente)
-        const tokenPlaceholderRegex = /(const\s+FIREBASE_AUTH_ID_TOKEN\s*=\s*)[^;]*;(\s*\/\/\s*Será preenchido dinamicamente)?/;
+        // --- NOVO: Regex para encontrar e substituir o placeholder FIREBASE_CLIENT_CONFIG ---
+        const configPlaceholderRegex = /(const\s+FIREBASE_CLIENT_CONFIG\s*=\s*)[^;]*;(\s*\/\/\s*Será preenchido dinamicamente)?/;
+        let configInjected = false;
+        const firebaseClientConfig = getFirebaseClientConfig(); // Obtenha a configuracao
 
+        if (configPlaceholderRegex.test(fileContent)) {
+            fileContent = fileContent.replace(
+                configPlaceholderRegex,
+                `$1${JSON.stringify(firebaseClientConfig)};`
+            );
+            configInjected = true;
+        } else {
+            // Fallback: Adiciona a linha se o placeholder nao for encontrado
+            const configLine = `// --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---\nconst FIREBASE_CLIENT_CONFIG = ${JSON.stringify(firebaseClientConfig)}; // Será preenchido dinamicamente\n// --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG ---\n\n`;
+            fileContent = configLine + fileContent;
+            configInjected = true;
+            console.warn(`[SERVER] Placeholder FIREBASE_CLIENT_CONFIG NÃO ENCONTRADO em ${fileName}. Adicionado no início do arquivo.`);
+        }
+        console.log(`[SERVER] Injeção de config Firebase em ${fileName}: ${configInjected ? 'SUCESSO' : 'FALHA'}.`);
+        // --- FIM NOVO ---
+
+
+        // ... (Seu código existente para injetar FIREBASE_AUTH_ID_TOKEN) ...
+        const tokenPlaceholderRegex = /(const\s+FIREBASE_AUTH_ID_TOKEN\s*=\s*)[^;]*;(\s*\/\/\s*Será preenchido dinamicamente)?/;
         let tokenInjected = false;
 
         if (tokenPlaceholderRegex.test(fileContent)) {
-            // Substitui o placeholder pelo token real, mantendo 'const FIREBASE_AUTH_ID_TOKEN = '
             fileContent = fileContent.replace(
                 tokenPlaceholderRegex,
-                `$1"${idTokenToInject || 'N/A'}";` // $1 é 'const FIREBASE_AUTH_ID_TOKEN = '
+                `$1"${idTokenToInject || 'N/A'}";`
             );
             tokenInjected = true;
         } else {
-            // Se o placeholder não for encontrado, adiciona a linha no início do script
-            // Isso é um fallback forte para garantir que a linha do token sempre exista.
             const tokenLine = `// --- CAMPO PARA ID TOKEN DO USUÁRIO (Gerado pelo Dashboard MULTCONTROL) ---\nconst FIREBASE_AUTH_ID_TOKEN = "${idTokenToInject || 'N/A'}"; // Será preenchido dinamicamente\n// --- FIM DO CAMPO PARA ID TOKEN ---\n\n`;
             fileContent = tokenLine + fileContent;
-            tokenInjected = true; // Considera injetado porque adicionamos
+            tokenInjected = true;
             console.warn(`[SERVER] Placeholder FIREBASE_AUTH_ID_TOKEN NÃO ENCONTRADO em ${fileName}. Adicionado no início do arquivo.`);
         }
-        
         console.log(`[SERVER] Injeção de token em ${fileName}: ${tokenInjected ? 'SUCESSO' : 'FALHA'}. Valor injetado: ${idTokenToInject ? 'REAL TOKEN' : 'N/A'}`);
+        // ... (Restante do código: return Buffer.from(fileContent).toString('base64');) ...
         
         return Buffer.from(fileContent).toString('base64');
     } catch (error) {

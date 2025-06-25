@@ -313,7 +313,9 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script> <script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
         console.log("Configurando Firebase diretamente no HTML do dashboard...");
         const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
         firebase.initializeApp(firebaseConfig);
@@ -352,7 +354,7 @@
             
             const captchaScriptCodeElement = document.getElementById('captchaScriptCode');
             const upadorScriptCodeElement = document.getElementById('upadorScriptCode');
-            const attackScriptCodeElement = document.getElementById('attackScriptCode');
+            const attackScriptCodeElement = document = document.getElementById('attackScriptCode'); // Erro de digitação aqui!
 
             const captchaAlertsList = document.getElementById('captchaAlertsList');
             const buildOrderAlertsList = document.getElementById('buildOrderAlertsList');

@@ -1,30 +1,33 @@
 // ==UserScript==
-// @name                 Upador Automatico editado + Coleta Recompensa + Refresh Automatico + Alerta de Construcao
-// @icon                 https://i.imgur.com/7WgHTT8.gif
-// @description          Script construtor para game tribalwars, realiza upagem "Upar" dos edificios do game, script realiza a atividade em formato inicial resolvendo as Quest do game, e apos o termino das Quest o script realiza upagem de acordo com perfil pre definido pelo autor do script. Pode ser modificado a alteracao de como e feita a upagem, pelo proprio usuario. Tambem coleta recompensas de construcao e inclui refresh automatico da pagina e alerta de construcao.
-// @author               MazzArthur
-// @include              http*://*.*game.php*
-// @version              0.0.9 // Versao com alerta de construcao adicionado
-// @grant                GM_getResourceText
-// @grant                GM_addStyle
-// @grant                GM_getValue
-// @grant                unsafeWindow
-// @grant                GM_xmlhttpRequest
-// @require              http://code.jquery.com/jquery-1.12.4.min.js
+// @name         Upador Automatico editado + Coleta Recompensa + Refresh Automatico + Alerta de Construcao
+// @icon         https://i.imgur.com/7WgHTT8.gif
+// @description  Script construtor para game tribalwars, realiza upagem "Upar" dos edificios do game, script realiza a atividade em formato inicial resolvendo as Quest do game, e apos o termino das Quest o script realiza upagem de acordo com perfil pre definido pelo autor do script. Pode ser modificado a alteracao de como e feita a upagem, pelo proprio usuario. Tambem coleta recompensas de construcao e inclui refresh automatico da pagina e alerta de construcao.
+// @author       MazzArthur
+// @include      http*://*.*game.php*
+// @version      0.0.9 // Versao com alerta de construcao adicionado
+// @grant        GM_getResourceText
+// @grant        GM_addStyle
+// @grant        GM_getValue
+// @grant        unsafeWindow
+// @grant        GM_xmlhttpRequest
+// @require      http://code.jquery.com/jquery-1.12.4.min.js
+// @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
+// @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js
+// @connect      multcontrol.onrender.com  <-- ESTA LINHA FOI ADICIONADA/CONFIRMADA AQUI
 // ==/UserScript==
 
 /*##############################################
 
-Logica inicial de Programação obtida, atraves de um tutorial
-      Denominado "Os 5 primeiros dias - Modo Novato"
-              Imagens Também do Mesmo
-                 Autoria : senson
+Logica inicial de Programacao obtida, atraves de um tutorial
+      Denominado "Os 5 primeiros dias - Modo Novato"
+              Imagens Tambem do Mesmo
+                    Autoria : senson
 
 https://forum.tribalwars.com.br/index.php?threads/os-5-primeiros-dias-modo-novato.334845/#post-3677800
 
 ##############################################*/
 
-//*************************** CONFIGURAcaO ***************************//
+//*************************** CONFIGURACAO ***************************//
 // Escolha Tempo de espera minimo e maximo entre acoes (em milissegundos)
 const Min_Tempo_Espera = 800;
 const Max_Tempo_Espera = 900;
@@ -35,10 +38,10 @@ const Etapa = "Etapa_1";
 // assim que um predio estiver disponivel para a fila de construcao (= false)
 const Construcao_Edificios_Ordem = true;
 
-// --- CONFIGURAcaO DE REFRESH AUTOMaTICO ---
+// --- CONFIGURACAO DE REFRESH AUTOMATICO ---
 const Auto_Refresh_Ativado = true; // Define se o refresh automatico esta ativo (true/false)
 const Intervalo_Refresh_Minutos = 30; // Intervalo para o refresh automatico em minutos (Ex: 30 = 30 minutos)
-// --- FIM DA CONFIGURAcaO DE REFRESH AUTOMaTICO ---
+// --- FIM DA CONFIGURACAO DE REFRESH AUTOMATICO ---
 
 // --- CONFIGURACAO DE ALERTA DE CONSTRUCAO ---
 const ALERTA_CONSTRUCAO_ATIVADO = true; // Ativa/desativa o envio de alerta para o site
@@ -46,24 +49,44 @@ const ALERT_SERVER_URL = "https://multcontrol.onrender.com/alert"; // URL do seu
 // Variavel para controlar o ultimo alerta enviado e evitar duplicacao rapida
 let lastBuildingAlertSent = { id: null, timestamp: 0 };
 const ALERT_COOLDOWN_MS = 5000; // 5 segundos de cooldown para o mesmo alerta
-// --- FIM DA CONFIGURAcaO DE ALERTA DE CONSTRUcaO ---
+// --- FIM DA CONFIGURACAO DE ALERTA DE CONSTRUCAO ---
+
+// --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---
+const FIREBASE_CLIENT_CONFIG = {}; // Será preenchido dinamicamente pelo servidor
+// --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG --
 
 // --- CAMPO PARA ID TOKEN DO USUARIO (Gerado pelo Dashboard MULTCONTROL) ---
 // POR FAVOR, SUBSTITUA "SEU_ID_TOKEN_AQUI" PELO SEU TOKEN REAL.
 // SEM ISSO, A FUNCIONALIDADE DE ALERTA NAO VAI FUNCIONAR.
-const FIREBASE_AUTH_ID_TOKEN = "SEU_ID_TOKEN_AQUI";
+const FIREBASE_AUTH_ID_TOKEN = "TOKEN_EXEMPLO_IGNORADO_PELO_SCRIPT"; // Este valor será ignorado. O token será obtido dinamicamente.
 // --- FIM DO CAMPO PARA ID TOKEN ---
 
-//*************************** /CONFIGURAcaO ***************************//
+//*************************** /CONFIGURACAO ***************************//
 
-// Constantes (NaO DEVE SER ALTERADAS)
+// Constantes (NAO DEVE SER ALTERADAS)
 const Visualizacao_Geral = "OVERVIEW_VIEW";
 const Edificio_Principal = "HEADQUARTERS_VIEW";
 
 
-// --- FUNcoES GLOBAIS (FORA DA IIFE) PARA ACESSO POR OUTRAS FUNcoES GLOBAIS ---
+// --- FUNCOES GLOBAIS (FORA DA IIFE) PARA ACESSO POR OUTRAS FUNCOES GLOBAIS ---
 
-// --- FUNcoES AUXILIARES PARA ALERTA DE CONSTRUcaO ---
+// Inicializa Firebase Client SDK no script (fora das funções para ser global)
+// Isso deve ser feito APENAS UMA VEZ por script.
+var authClient; // Declarado aqui para ser acessível globalmente no script
+try {
+    if (typeof firebase !== 'undefined' && FIREBASE_CLIENT_CONFIG && Object.keys(FIREBASE_CLIENT_CONFIG).length > 0) {
+        firebase.initializeApp(FIREBASE_CLIENT_CONFIG);
+        authClient = firebase.auth();
+        console.log('[TW Script] Firebase Client SDK inicializado com config injetada.');
+    } else {
+        console.warn('[TW Script] Firebase Client SDK não inicializado no script. FIREBASE_CLIENT_CONFIG ausente ou inválida. O token dinâmico não funcionará.');
+    }
+} catch (e) {
+    console.error('[TW Script ERROR] Erro ao inicializar Firebase Client SDK no script:', e);
+}
+
+
+// --- FUNCOES AUXILIARES PARA ALERTA DE CONSTRUCAO ---
 function getNickname() {
     const nicknameElement = document.querySelector("#menu_row > td:nth-child(11) > table > tbody > tr:nth-child(1) > td > a");
     if (!nicknameElement) {
@@ -103,58 +126,82 @@ function getBuildingName(buildingId) {
     return `${name} Nv. ${levelPart}`;
 }
 
-function sendBuildingAlert(buildingId) {
-    if (!ALERTA_CONSTRUCAO_ATIVADO) {
-        console.log('[TW Script] Alerta de construcao desativado nas configuracoes.');
-        return;
-    }
-
-    // Verifica se este mesmo alerta foi enviado muito recentemente
-    const currentTime = Date.now();
-    if (lastBuildingAlertSent.id === buildingId && (currentTime - lastBuildingAlertSent.timestamp < ALERT_COOLDOWN_MS)) {
-        console.log(`[TW Script] Alerta para ${buildingId} ignorado: cooldown ativo.`);
-        return;
-    }
-
-    const nickname = getNickname();
-    const buildingName = getBuildingName(buildingId);
-    const message = `🛠️ Construcao Iniciada: "${buildingName}" na conta "${nickname}"!`;
-
-    console.log(`[TW Script] ENVIANDO ALERTA DE CONSTRUcaO: "${message}" para ${ALERT_SERVER_URL}`);
-
-    if (typeof GM_xmlhttpRequest === 'undefined') {
-        console.error('[TW Script ERROR] GM_xmlhttpRequest NaO esta definido. Verifique a permissao @grant no cabecalho do script!');
-        return;
-    }
-
-    GM_xmlhttpRequest({
-        method: "POST",
-        url: ALERT_SERVER_URL,
-        headers: {
-            "Content-Type": "application/json"
-        },
-        data: JSON.stringify({ message: message }),
-        onload: function(response) {
-            if (response.status >= 200 && response.status < 300) {
-                console.log("[TW Script] Alerta de construcao enviado com sucesso. Resposta do servidor:", response.responseText);
-                // Atualiza o estado do ultimo alerta enviado apenas se for bem-sucedido
-                lastBuildingAlertSent = { id: buildingId, timestamp: currentTime };
-            } else {
-                console.error(`[TW Script] Erro ao enviar alerta de construcao. Status: ${response.status}. Resposta: ${response.responseText || 'N/A'}`);
-            }
-        },
-        onerror: function(error) {
-            console.error("[TW Script] Erro de rede ao enviar alerta de construcao:", error);
+// sendBuildingAlert agora retorna uma Promise
+async function sendBuildingAlert(buildingId) { // Adicionado 'async'
+    return new Promise(async (resolve, reject) => { // Adicionado 'async' aqui também
+        if (!ALERTA_CONSTRUCAO_ATIVADO) {
+            console.log('[TW Script] Alerta de construcao desativado nas configuracoes.');
+            return resolve(); // Resolve imediatamente se desativado
         }
+
+        // --- Obtem o ID Token FRESCO do Firebase Client ---
+        let idToken;
+        try {
+            // Verifica se authClient esta inicializado e se ha um usuario logado
+            if (typeof authClient === 'undefined' || !authClient.currentUser) {
+                console.error('[TW Script ERROR] Nenhum usuario logado no Firebase no script ou authClient nao inicializado. Login necessario no dashboard.');
+                return reject(new Error("Usuario nao autenticado ou Firebase Client nao inicializado."));
+            }
+            idToken = await authClient.currentUser.getIdToken(); // OBTÉM TOKEN FRESCO
+            console.log('[TW Script] ID Token fresco obtido com sucesso.');
+        } catch (error) {
+            console.error('[TW Script ERROR] Erro ao obter ID Token fresco no script:', error);
+            return reject(error); // Rejeita se o token nao puder ser obtido
+        }
+        // --- FIM: Obtem o ID Token FRESCO ---
+
+
+        // Verifica se este mesmo alerta foi enviado muito recentemente
+        const currentTime = Date.now();
+        if (lastBuildingAlertSent.id === buildingId && (currentTime - lastBuildingAlertSent.timestamp < ALERT_COOLDOWN_MS)) {
+            console.log(`[TW Script] Alerta para ${buildingId} ignorado: cooldown ativo.`);
+            return resolve(); // Resolve se estiver em cooldown
+        }
+
+        const nickname = getNickname();
+        const buildingName = getBuildingName(buildingId);
+        const message = `🛠️ Construcao Iniciada: "${buildingName}" na conta "${nickname}"!`;
+
+        console.log(`[TW Script] ENVIANDO ALERTA DE CONSTRUCAO: "${message}" para ${ALERT_SERVER_URL}`);
+
+        if (typeof GM_xmlhttpRequest === 'undefined') {
+            console.error('[TW Script ERROR] GM_xmlhttpRequest NAO esta definido. Verifique a permissao @grant no cabecalho do script!');
+            return reject(new Error("GM_xmlhttpRequest nao definido.")); // Rejeita se GM_xmlhttpRequest nao estiver disponivel
+        }
+
+        GM_xmlhttpRequest({
+            method: "POST",
+            url: ALERT_SERVER_URL,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${idToken}` // Adiciona o token de autenticacao FRESCO
+            },
+            data: JSON.stringify({ message: message }),
+            onload: function(response) {
+                if (response.status >= 200 && response.status < 300) {
+                    console.log("[TW Script] Alerta de construcao enviado com sucesso. Resposta do servidor:", response.responseText);
+                    // Atualiza o estado do ultimo alerta enviado apenas se for bem-sucedido
+                    lastBuildingAlertSent = { id: buildingId, timestamp: currentTime };
+                    resolve(response); // Resolve a Promise em sucesso
+                } else {
+                    console.error(`[TW Script] Erro ao enviar alerta de construcao. Status: ${response.status}. Resposta: ${response.responseText || 'N/A'}`);
+                    reject(new Error(`Erro ao enviar alerta: Status ${response.status}`)); // Rejeita em erro HTTP
+                }
+            },
+            onerror: function(error) {
+                console.error("[TW Script] Erro de rede ao enviar alerta de construcao:", error);
+                reject(error); // Rejeita em erro de rede
+            }
+        });
     });
 }
-// --- FIM DAS FUNcoES AUXILIARES PARA ALERTA DE CONSTRUcaO ---
+// --- FIM DAS FUNCOES AUXILIARES PARA ALERTA DE CONSTRUCAO ---
 
 
-// --- FUNcoES DE COLETA DE RECOMPENSAS (tambem movidas para o escopo global) ---
+// --- FUNCOES DE COLETA DE RECOMPENSAS (tambem movidas para o escopo global) ---
 function esperarQuestlines(callback) {
     const intervalo = setInterval(() => {
-        if (typeof Questlines !== 'undefined') {
+        if (typeof unsafeWindow.Questlines !== 'undefined' && unsafeWindow.Questlines) { // Usar unsafeWindow aqui
             clearInterval(intervalo);
             callback();
         }
@@ -162,15 +209,15 @@ function esperarQuestlines(callback) {
 }
 
 function abrirRecompensas() {
-    if (typeof Questlines === 'undefined') {
+    if (typeof unsafeWindow.Questlines === 'undefined' || !unsafeWindow.Questlines) { // Usar unsafeWindow aqui
         console.warn('[TW Script] Questlines nao esta definido. Nao foi possivel abrir o popup de recompensas.');
         return;
     }
-    Questlines.showDialog(0, 'main-tab');
+    unsafeWindow.Questlines.showDialog(0, 'main-tab'); // Usar unsafeWindow aqui
     console.log('[TW Script] Popup de recompensas aberto.');
 
     setTimeout(() => {
-        Questlines.selectTabById('main-tab', 0);
+        unsafeWindow.Questlines.selectTabById('main-tab', 0); // Usar unsafeWindow aqui
         console.log('[TW Script] Aba "main-tab" selecionada.');
 
         setTimeout(() => {
@@ -194,27 +241,39 @@ function abrirRecompensas() {
 }
 
 function coletarRecompensas() {
-    const botoes = document.querySelectorAll('#reward-system-rewards > tr > td:nth-child(6) > a');
+    const botoes = document.querySelectorAll('#reward-system-rewards > tr > td:nth-child(6) > a:not(.btn-disabled)'); // Adicionei ':not(.btn-disabled)'
     if (botoes.length === 0) {
         console.log('[TW Script] Nenhuma recompensa disponivel para coleta.');
         setTimeout(simularEsc, 1000);
     } else {
         console.log(`[TW Script] Encontrados ${botoes.length} botoes de recompensa.`);
-        botoes.forEach((btn, i) => {
-            let cliques = 0;
-            const maxCliques = 5;
-            const intervaloClique = setInterval(() => {
-                if (btn && cliques < maxCliques) {
+        let i = 0;
+        const collectNext = () => { // Usar funcao para controlar loop
+            if (i < botoes.length) {
+                const btn = botoes[i];
+                if (btn && !btn.classList.contains('btn-disabled')) { // Verificar se o botao nao esta desabilitado
                     btn.click();
-                    cliques++;
-                    console.log(`[TW Script] Clique ${cliques} no botao de recompensa ${i + 1}.`);
+                    console.log(`[TW Script] Clicado no botao de recompensa ${i + 1}.`);
                 } else {
-                    clearInterval(intervaloClique);
-                    console.log(`[TW Script] Finalizado o clique no botao de recompensa ${i + 1}.`);
+                    console.log(`[TW Script] Botao ${i + 1} ja coletado ou desabilitado.`);
                 }
-            }, 1000);
-        });
-        setTimeout(simularEsc, (botoes.length * 1000) + 1000);
+                i++;
+                setTimeout(collectNext, 500); // Pequeno atraso entre cliques para processamento
+            } else {
+                console.log('[TW Script] Todas as recompensas visiveis foram clicadas.');
+                // Apos tentar coletar todos os botoes visiveis, fecha o popup ou reavalia
+                setTimeout(() => {
+                    const remainingButtons = document.querySelectorAll('#reward-system-rewards > tr > td:nth-child(6) > a:not(.btn-disabled)');
+                    if (remainingButtons.length > 0) {
+                        console.log('[TW Script] Ainda ha recompensas apos a coleta. Tentando coletar novamente.');
+                        coletarRecompensas(); // Chama recursivamente se ainda houver botoes
+                    } else {
+                        simularEsc(); // Fecha o popup se nao houver mais botoes
+                    }
+                }, 1500); // Atraso para o estado da UI se atualizar
+            }
+        };
+        collectNext(); // Inicia o processo de coleta
     }
 }
 
@@ -230,7 +289,7 @@ function simularEsc() {
     document.dispatchEvent(eventoEsc);
     console.log('[TW Script] Tecla ESC simulada. Popup fechado.');
 }
-// --- FIM DAS FUNcoES DE COLETA DE RECOMPENSAS ---
+// --- FIM DAS FUNCOES DE COLETA DE RECOMPENSAS ---
 
 
 (function() {
@@ -238,7 +297,7 @@ function simularEsc() {
 
     console.log("-- Script do Tribal Wars ativado --");
 
-    // --- LoGICA DE REFRESH AUTOMaTICO ---
+    // --- LOGICA DE REFRESH AUTOMATICO ---
     if (Auto_Refresh_Ativado) {
         const refreshIntervalMs = Intervalo_Refresh_Minutos * 60 * 1000;
         console.log(`[TW Script] Refresh automatico ativado a cada ${Intervalo_Refresh_Minutos} minutos.`);
@@ -247,18 +306,22 @@ function simularEsc() {
             location.reload();
         }, refreshIntervalMs);
     }
-    // --- FIM DA LoGICA DE REFRESH AUTOMaTICO ---
+    // --- FIM DA LOGICA DE REFRESH AUTOMATICO ---
 
     // Inicia a coleta de recompensas logo que o Questlines estiver disponivel
+    // A logica agora espera por unsafeWindow.Questlines
     esperarQuestlines(abrirRecompensas);
 
     if (Etapa == "Etapa_1"){
+        // executeEtapa1 vai conter o setInterval para Proxima_Construcao
         executarEtapa1();
     }
 
 })(); // Fim da IIFE principal
 
-// Logica para "Completar Gratis"
+// Logica para "Completar Gratis" - Este bloco nao foi modificado pela sugestao de async/await
+// Mas se o botao de 'Finalizar' esta em outra parte da pagina, esta logica pode nao ser ativada.
+// MANTIDO DO SEU CÓDIGO ANTERIOR PARA O CASO DE SER A LÓGICA ATIVA
 setInterval(function(){
     var text="";
     var tr=$('[id="buildqueue"]').find('tr').eq(1);
@@ -268,9 +331,9 @@ setInterval(function(){
 
         if(timeSplit.length >= 3 && (timeSplit[0]*60*60+timeSplit[1]*60+timeSplit[2]*1 < 3*60)){
             console.log("[TW Script] Completar Gratis em " + text);
-            tr.find('td').eq(2).find('a').eq(2).click();
+            tr.find('td').eq(2).find('a').eq(2).click(); // Clica no botao de completar da fila
             setTimeout(function() {
-                $('[class="btn btn-confirm-yes"]').click();
+                $('[class="btn btn-confirm-yes"]').click(); // Clica no botao de confirmacao
                 // Manter abrirRecompensas aqui, pois o usuario deseja que a coleta ocorra apos o "Completar Gratis"
                 abrirRecompensas();
             }, 500);
@@ -293,7 +356,7 @@ function executarEtapa1(){
 
     if (Evoluir_vilas == Edificio_Principal){
         setInterval(function(){
-            Proxima_Construcao();
+            Proxima_Construcao(); // Proxima_Construcao agora é async e lida com o await
         }, 1000);
 
     } else if (Evoluir_vilas == Visualizacao_Geral){
@@ -312,15 +375,21 @@ function getEvoluir_vilas(){
     return null;
 }
 
-function Proxima_Construcao(){
+// Proxima_Construcao agora é async
+async function Proxima_Construcao(){ // Adicionado 'async'
     let Construcao_proximo_edificio = getConstrucao_proximo_edificio();
     if (Construcao_proximo_edificio !== undefined && Construcao_proximo_edificio !== null){
         let delay = Math.floor(Math.random() * (Max_Tempo_Espera - Min_Tempo_Espera) + Min_Tempo_Espera);
         console.log(`[TW Script] Tentando construir ${Construcao_proximo_edificio.id} em ${delay}ms`);
 
-        // ENVIAR ALERTA AQUI, APENAS UMA VEZ PARA A CONSTRUcaO (com controle de cooldown)
-        sendBuildingAlert(Construcao_proximo_edificio.id);
-        console.log("[TW Script] Alerta de construcao solicitado ANTES do clique para garantir registro.");
+        try {
+            // AQUI: await a Promise antes de continuar
+            await sendBuildingAlert(Construcao_proximo_edificio.id);
+            console.log("[TW Script] Alerta de construcao enviado (await). Prossiga com o clique.");
+        } catch (error) {
+            console.error("[TW Script] Falha no envio do alerta, mas continuando com o clique:", error.message);
+            // Decide se quer parar ou continuar mesmo com erro no envio do alerta
+        }
 
         setTimeout(function() {
             Construcao_proximo_edificio.click();
@@ -356,7 +425,7 @@ function getConstrucao_proximo_edificio() {
 
             if (isVisible && isClickable && currentLevel < targetLevel){
                 instituir = proximo_edificio;
-                if (Construcao_Edificios_Ordem){
+                if (Construcao_Edifcios_Ordem){
                     break;
                 }
             }
@@ -400,7 +469,7 @@ function getConstrucao_Edifcios_Serie() {
         "main_buildlink_wood_4", // Construcao Madeira 4
         "main_buildlink_stone_4", // Construcao Argila 4
 
-        //---------------- Recrutar Paladino - Escolher Bandeira -  -----------------//
+        //---------------- Recrutar Paladino - Escolher Bandeira - -----------------//
         "main_buildlink_wall_1", // Construcao Muralha 1
         "main_buildlink_hide_2", // Construcao Esconderijo 2
         "main_buildlink_hide_3", // Construcao Esconderijo 3
@@ -426,7 +495,7 @@ function getConstrucao_Edifcios_Serie() {
         "main_buildlink_farm_5", // Construcao Fazenda 5
         "main_buildlink_farm_6", // Construcao Fazenda 6
 
-        //---------------- https://image.prntscr.com/image/oMwaEPpCR2_1XaHzlMaobg.png -  -----------------//
+        //---------------- https://image.prntscr.com/image/oMwaEPpCR2_1XaHzlMaobg.png - -----------------//
         "main_buildlink_wood_11", // Construcao Madeira 11
         "main_buildlink_stone_11", // Construcao Argila 11
         "main_buildlink_wood_12", // Construcao Madeira 12
@@ -443,7 +512,7 @@ function getConstrucao_Edifcios_Serie() {
         "main_buildlink_farm_9", // Construcao Fazenda 9
         "main_buildlink_farm_10", // Construcao Fazenda 10
 
-        //---------------- https://image.prntscr.com/image/n6tBlPGORAq9RmqSVccTKg.png -  -----------------//
+        //---------------- https://image.prntscr.com/image/n6tBlPGORAq9RmqSVccTKg.png - -----------------//
         "main_buildlink_wood_13", // Construcao Madeira 13
         "main_buildlink_stone_13", // Construcao Argila 13
         "main_buildlink_iron_11", // Construcao Ferro 11
@@ -454,7 +523,7 @@ function getConstrucao_Edifcios_Serie() {
         "main_buildlink_main_9", // Construcao Edificio Principal 9
         "main_buildlink_main_10", // Construcao Edificio Principal 10
 
-        //---------------- https://image.prntscr.com/image/3pioalUXRK6AH9wNYnRxyQ.png -  -----------------//
+        //---------------- https://image.prntscr.com/image/3pioalUXRK6AH9wNYnRxyQ.png - -----------------//
         "main_buildlink_wood_14", // Construcao Madeira 14
         "main_buildlink_stone_14", // Construcao Argila 14
         "main_buildlink_wood_15", // Construcao Madeira 15

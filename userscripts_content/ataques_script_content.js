@@ -25,7 +25,7 @@
     // --- FIM DO CAMPO PARA ID TOKEN ---
 
     // *************************** CONFIGURAÇÃO *************************** //
-    const ALERT_SERVER_URL = "http://localhost:3000/alert";
+    const ALERT_SERVER_URL = "https://multcontrol.onrender.com/alert";
     const CHECK_INTERVAL_MS = 5000;
 
     // REMOVIDO EMOJI DA MENSAGEM PADRÃO

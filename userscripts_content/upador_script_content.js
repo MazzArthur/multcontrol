@@ -1,16 +1,16 @@
 // ==UserScript==
-// @name                Upador Automatico editado + Coleta Recompensa + Refresh Automático + Alerta de Construção
-// @icon                https://i.imgur.com/7WgHTT8.gif
-// @description         Script construtor para game tribalwars, realiza upagem “Upar” dos edifícios do game, script realiza a atividade em formato inicial resolvendo as Quest do game, e após o término das Quest o script realiza upagem de acordo com perfil pré definido pelo autor do script. Pode ser modificado a alteração de como é feita a upagem, pelo próprio usuário. Também coleta recompensas de construção e inclui refresh automático da página e alerta de construção.
-// @author              MazzArthur
-// @include             http*://*.*game.php*
-// @version             0.0.9 // Versão com alerta de construção adicionado
-// @grant               GM_getResourceText
-// @grant               GM_addStyle
-// @grant               GM_getValue
-// @grant               unsafeWindow
-// @grant               GM_xmlhttpRequest
-// @require             http://code.jquery.com/jquery-1.12.4.min.js
+// @name                 Upador Automatico editado + Coleta Recompensa + Refresh Automatico + Alerta de Construcao
+// @icon                 https://i.imgur.com/7WgHTT8.gif
+// @description          Script construtor para game tribalwars, realiza upagem "Upar" dos edificios do game, script realiza a atividade em formato inicial resolvendo as Quest do game, e apos o termino das Quest o script realiza upagem de acordo com perfil pre definido pelo autor do script. Pode ser modificado a alteracao de como e feita a upagem, pelo proprio usuario. Tambem coleta recompensas de construcao e inclui refresh automatico da pagina e alerta de construcao.
+// @author               MazzArthur
+// @include              http*://*.*game.php*
+// @version              0.0.9 // Versao com alerta de construcao adicionado
+// @grant                GM_getResourceText
+// @grant                GM_addStyle
+// @grant                GM_getValue
+// @grant                unsafeWindow
+// @grant                GM_xmlhttpRequest
+// @require              http://code.jquery.com/jquery-1.12.4.min.js
 // ==/UserScript==
 
 /*##############################################

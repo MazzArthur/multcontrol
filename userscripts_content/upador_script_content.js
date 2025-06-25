@@ -425,7 +425,7 @@ function getConstrucao_proximo_edificio() {
 
             if (isVisible && isClickable && currentLevel < targetLevel){
                 instituir = proximo_edificio;
-                if (Construcao_Edifcios_Ordem){
+                if (Construcao_Edificios_Ordem){
                     break;
                 }
             }

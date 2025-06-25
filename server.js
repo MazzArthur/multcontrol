@@ -23,10 +23,22 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://www.gstatic.com", "https://apis.google.com", "'unsafe-inline'"], // ADICIONADO: 'unsafe-inline'
-            connectSrc: ["'self'", "https://multcontrol.onrender.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com"],
+            scriptSrc: [
+                "'self'",
+                "https://www.gstatic.com",
+                "https://apis.google.com",
+                "https://identitytoolkit.googleapis.com", // ADICIONADO AQUI!
+                "'unsafe-inline'"
+            ], 
+            connectSrc: [
+                "'self'",
+                "https://multcontrol.onrender.com",
+                "https://securetoken.googleapis.com",
+                "https://firestore.googleapis.com",
+                "https://identitytoolkit.googleapis.com" // ADICIONADO AQUI!
+            ], 
             imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://www.google.com", "https://dsbr.innogamescdn.com"],
-            styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"], // ADICIONADO: 'unsafe-inline' para o bloco <style>
+            styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             objectSrc: ["'none'"],
             upgradeInsecureRequests: [],

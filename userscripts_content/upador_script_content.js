@@ -42,7 +42,7 @@ const Intervalo_Refresh_Minutos = 30; // Intervalo para o refresh automatico em 
 
 // --- CONFIGURACAO DE ALERTA DE CONSTRUCAO ---
 const ALERTA_CONSTRUCAO_ATIVADO = true; // Ativa/desativa o envio de alerta para o site
-const ALERT_SERVER_URL = "http://localhost:3000/alert"; // URL do seu servidor de alertas
+const ALERT_SERVER_URL = "https://multcontrol.onrender.com/alert"; // URL do seu servidor de alertas
 // Variavel para controlar o ultimo alerta enviado e evitar duplicacao rapida
 let lastBuildingAlertSent = { id: null, timestamp: 0 };
 const ALERT_COOLDOWN_MS = 5000; // 5 segundos de cooldown para o mesmo alerta

@@ -13,7 +13,7 @@
 // @require      http://code.jquery.com/jquery-1.12.4.min.js
 // @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
 // @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js
-// @connect      multcontrol.onrender.com  <-- ESTA LINHA FOI ADICIONADA/CONFIRMADA AQUI
+// @connect      multcontrol.onrender.com
 // ==/UserScript==
 
 /*##############################################
@@ -36,7 +36,7 @@ const Max_Tempo_Espera = 900;
 const Etapa = "Etapa_1";
 // Escolha se voce deseja que o bot enfileire os edificios na ordem definida (= true) ou
 // assim que um predio estiver disponivel para a fila de construcao (= false)
-const Construcao_Edificios_Ordem = true;
+const Construcao_Edificios_Ordem = true; // <-- ESTA É A VARIAVEL CORRETA
 
 // --- CONFIGURACAO DE REFRESH AUTOMATICO ---
 const Auto_Refresh_Ativado = true; // Define se o refresh automatico esta ativo (true/false)
@@ -52,7 +52,7 @@ const ALERT_COOLDOWN_MS = 5000; // 5 segundos de cooldown para o mesmo alerta
 // --- FIM DA CONFIGURACAO DE ALERTA DE CONSTRUCAO ---
 
 // --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---
-const FIREBASE_CLIENT_CONFIG = {};
+const FIREBASE_CLIENT_CONFIG = {}; // Será preenchido dinamicamente pelo servidor
 // --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG --
 
 // --- CAMPO PARA ID TOKEN DO USUARIO (Gerado pelo Dashboard MULTCONTROL) ---
@@ -128,7 +128,7 @@ function getBuildingName(buildingId) {
 
 // sendBuildingAlert agora retorna uma Promise
 async function sendBuildingAlert(buildingId) { // Adicionado 'async'
-    return new Promise(async (resolve, reject) => { // Adicionado 'async' aqui também
+    return new Promise(async (resolve, reject) => { // Adicionado 'async' aqui tambem
         if (!ALERTA_CONSTRUCAO_ATIVADO) {
             console.log('[TW Script] Alerta de construcao desativado nas configuracoes.');
             return resolve(); // Resolve imediatamente se desativado
@@ -425,7 +425,7 @@ function getConstrucao_proximo_edificio() {
 
             if (isVisible && isClickable && currentLevel < targetLevel){
                 instituir = proximo_edificio;
-                if (Construcao_Edificios_Ordem){
+                if (Construcao_Edificios_Ordem){ // CORRIGIDO: Agora usa Construcao_Edificios_Ordem (sem 'ç')
                     break;
                 }
             }

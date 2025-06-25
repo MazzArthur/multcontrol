@@ -4,7 +4,7 @@ const fs = require('fs');
 const cors = require('cors');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
-const helmet = require('helmet'); // ADICIONADO: Importa a biblioteca helmet
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
@@ -18,24 +18,24 @@ app.set('views', path.join(__dirname));
 app.use(cors());
 app.use(express.json());
 
-// ADICIONADO: Configuração do Helmet para Content Security Policy (CSP)
+// Configuração do Helmet para Content Security Policy (CSP)
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: [
-                "'self'",
-                "https://www.gstatic.com",
-                "https://apis.google.com",
-                "https://identitytoolkit.googleapis.com", // ADICIONADO AQUI!
+                "'self'", 
+                "https://www.gstatic.com", 
+                "https://apis.google.com", 
+                "https://identitytoolkit.googleapis.com",
                 "'unsafe-inline'"
             ], 
             connectSrc: [
-                "'self'",
-                "https://multcontrol.onrender.com",
-                "https://securetoken.googleapis.com",
-                "https://firestore.googleapis.com",
-                "https://identitytoolkit.googleapis.com" // ADICIONADO AQUI!
+                "'self'", 
+                "https://multcontrol.onrender.com", 
+                "https://securetoken.googleapis.com", 
+                "https://firestore.googleapis.com", 
+                "https://identitytoolkit.googleapis.com"
             ], 
             imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://www.google.com", "https://dsbr.innogamescdn.com"],
             styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
@@ -45,7 +45,6 @@ app.use(helmet({
         },
     },
 }));
-// FIM DO BLOCO ADICIONADO: Configuração do Helmet
 
 // Configuração do Firebase Admin SDK
 try {
@@ -225,44 +224,93 @@ app.post('/alert', async (req, res) => {
 
 // REMOVEMOS A ROTA app.get('/alerts') pois o frontend buscará diretamente do Firestore agora.
 
-// NOVA ROTA: Para o userscript obter um Custom Token fresco usando a Userscript API Key
+// ADICIONADO LOG DE DIAGNÓSTICO: Tentando definir a rota GET /get_userscripts_with_token
+console.log('[SERVER DIAGNOSTIC] Tentando definir a rota GET /get_userscripts_with_token');
+// Rota para o dashboard obter os scripts com o token preenchido APÓS o login do cliente - MANTIDA
+app.get('/get_userscripts_with_token', async (req, res) => {
+    console.log('[SERVER DIAGNOSTIC] Requisição para GET /get_userscripts_with_token recebida!'); // ADICIONADO LOG DE DIAGNÓSTICO
+    const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
+
+    if (!idToken) {
+        console.warn('[SERVER DIAGNOSTIC] GET /get_userscripts_with_token chamada sem ID Token. Isso pode acontecer ao carregar a página inicialmente.');
+        return res.status(401).json({ error: 'Não autorizado. Token de autenticação ausente.' });
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const uid = decodedToken.uid;
+
+        let userscriptKey;
+        const keyDoc = await db.collection('userscriptKeys').doc(uid).get();
+        if (keyDoc.exists) {
+            userscriptKey = keyDoc.data().userscriptKey;
+            console.log(`[SERVER DIAGNOSTIC] Userscript API Key existente para UID: ${uid} carregada para injeção.`);
+        } else {
+            userscriptKey = crypto.randomBytes(32).toString('hex');
+            await db.collection('userscriptKeys').doc(uid).set({
+                uid: uid,
+                userscriptKey: userscriptKey,
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            console.log(`[SERVER DIAGNOSTIC] Nova Userscript API Key gerada e salva para UID: ${uid} para injeção.`);
+        }
+
+        const captchaScriptBase64 = readScriptFileAsBase64('captcha_script_content.js', userscriptKey); 
+        const upadorScriptBase64 = readScriptFileAsBase64('upador_script_content.js', userscriptKey);
+        const ataquesScriptBase64 = readScriptFileAsBase64('ataques_script_content.js', userscriptKey);
+
+        res.json({
+            captchaScriptBase64: captchaScriptBase64,
+            upadorScriptBase64: upadorScriptBase64,
+            ataquesScriptBase64: ataquesScriptBase64
+        });
+        console.log('[SERVER DIAGNOSTIC] Scripts injetados e enviados para /get_userscripts_with_token.');
+
+    } catch (error) {
+        console.error('[SERVER DIAGNOSTIC] Erro interno na rota /get_userscripts_with_token:', error);
+        res.status(500).json({ error: 'Erro interno ao gerar scripts.' });
+    }
+});
+
+// ADICIONADO LOG DE DIAGNÓSTICO: Tentando definir a rota POST /api/get_fresh_id_token
+console.log('[SERVER DIAGNOSTIC] Tentando definir a rota POST /api/get_fresh_id_token');
+// Rota para o userscript obter um Custom Token fresco usando a Userscript API Key
 app.post('/api/get_fresh_id_token', async (req, res) => {
-    const userscriptApiKey = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null; // Userscript API Key no header
+    console.log('[SERVER DIAGNOSTIC] Requisição para POST /api/get_fresh_id_token recebida!'); // ADICIONADO LOG DE DIAGNÓSTICO
+    const userscriptApiKey = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
 
     if (!userscriptApiKey) {
+        console.warn('[SERVER DIAGNOSTIC] /api/get_fresh_id_token chamada sem Userscript API Key.');
         return res.status(401).json({ error: 'Userscript API Key ausente.' });
     }
 
     try {
-        // Busca a Userscript API Key no Firestore para obter o UID
         const querySnapshot = await db.collection('userscriptKeys').where('userscriptKey', '==', userscriptApiKey).limit(1).get();
 
         if (querySnapshot.empty) {
-            console.warn('[SERVER] Tentativa de obter token com Userscript API Key inválida.');
+            console.warn('[SERVER DIAGNOSTIC] Tentativa de obter token com Userscript API Key inválida.');
             return res.status(401).json({ error: 'Userscript API Key inválida.' });
         }
 
         const uid = querySnapshot.docs[0].data().uid;
 
-        // Cria um Custom Token para este UID
         const customToken = await admin.auth().createCustomToken(uid);
 
-        console.log(`[SERVER] Custom Token fresco gerado com sucesso para UID: ${uid}`);
+        console.log(`[SERVER DIAGNOSTIC] Custom Token fresco gerado com sucesso para UID: ${uid}`);
         res.json({ customToken: customToken });
 
     } catch (error) {
-        console.error('[SERVER ERROR] Erro ao obter Custom Token com Userscript API Key:', error);
-        res.status(401).json({ error: 'Não autorizado ou erro ao gerar Custom Token.' });
+        console.error('[SERVER DIAGNOSTIC] Erro interno na rota /api/get_fresh_id_token:', error);
+        res.status(500).json({ error: 'Erro interno ao gerar Custom Token.' });
     }
 });
 
 
 // Servidor Express escutando na porta
 app.listen(PORT, () => {
-    // Estas mensagens de log são para o seu console do Render, mostrando onde o servidor está rodando.
     console.log(`Servidor rodando em http://localhost:${PORT}`);
     console.log(`Página de login disponível em https://multcontrol.onrender.com/`);
     console.log(`Endpoint de alerta (POST): https://multcontrol.onrender.com/alert`);
-    console.log(`Endpoint para obter scripts com token (GET): https://multcontrol.onrender.com/get_userscripts_with_token`);
+    console.log(`Endpoint para obter scripts (GET): https://multcontrol.onrender.com/get_userscripts_with_token`);
     console.log(`Endpoint para obter Custom Token (POST): https://multcontrol.onrender.com/api/get_fresh_id_token`);
 });

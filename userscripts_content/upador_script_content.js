@@ -31,7 +31,7 @@ const Max_Tempo_Espera = 900;
 
 // Etapa_1: Upar O bot automaticamente em Serie Edificios
 const Etapa = "Etapa_1";
-// Escolha se você deseja que o bot enfileire os edificios na ordem definida (= true) ou
+// Escolha se voce deseja que o bot enfileire os edificios na ordem definida (= true) ou
 // assim que um predio estiver disponivel para a fila de construcao (= false)
 const Construcao_Edificios_Ordem = true;
 
@@ -67,7 +67,7 @@ const Edificio_Principal = "HEADQUARTERS_VIEW";
 function getNickname() {
     const nicknameElement = document.querySelector("#menu_row > td:nth-child(11) > table > tbody > tr:nth-child(1) > td > a");
     if (!nicknameElement) {
-        console.warn('[TW Script] Nickname element (#menu_row...) nao encontrado. Retornando "Desconhecido". Isso pode ocorrer se você nao estiver na tela principal ou a estrutura HTML mudou.');
+        console.warn('[TW Script] Nickname element (#menu_row...) nao encontrado. Retornando "Desconhecido". Isso pode ocorrer se voce nao estiver na tela principal ou a estrutura HTML mudou.');
     }
     return nicknameElement ? nicknameElement.textContent.trim() : "Desconhecido";
 }
@@ -367,7 +367,7 @@ function getConstrucao_proximo_edificio() {
 
 function getConstrucao_Edifcios_Serie() {
     // A ordem de construcao foi atualizada com base na sua prioridade.
-    const Sequência_Construcao = [
+    const Sequencia_Construcao = [
         // Foco em recursos iniciais e Edificio Principal
         "main_buildlink_wood_1", // Construcao Madeira 1
         "main_buildlink_stone_1", // Construcao Argila 1
@@ -545,5 +545,5 @@ function getConstrucao_Edifcios_Serie() {
         "main_buildlink_storage_30" // Construcao Armazem 30
     ];
 
-    return Sequência_Construcao;
+    return Sequencia_Construcao;
 }

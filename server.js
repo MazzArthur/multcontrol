@@ -50,29 +50,33 @@ function readScriptFileAsBase64(fileName, idTokenToInject) {
         const filePath = path.resolve(__dirname, 'userscripts_content', fileName);
         let fileContent = fs.readFileSync(filePath, 'utf8');
 
-        // --- NOVO: Regex para encontrar e substituir o placeholder FIREBASE_CLIENT_CONFIG ---
-        const configPlaceholderRegex = /(const\s+FIREBASE_CLIENT_CONFIG\s*=\s*)[^;]*;(\s*\/\/\s*Será preenchido dinamicamente)?/;
+        // --- CORREÇÃO AQUI: NOVO REGEX MAIS SEGURO PARA FIREBASE_CLIENT_CONFIG ---
+        // Ele procura por 'const FIREBASE_CLIENT_CONFIG = {};'
+        // e SUBSTITUI APENAS o '{};' com o JSON real.
+        // Isso garante que comentários na mesma linha não sejam bagunçados.
+        const configPlaceholderRegex = /(const\s+FIREBASE_CLIENT_CONFIG\s*=\s*){};/;
         let configInjected = false;
         const firebaseClientConfig = getFirebaseClientConfig(); // Obtenha a configuracao
 
         if (configPlaceholderRegex.test(fileContent)) {
+            // Substitui o placeholder APENAS pelo JSON string
             fileContent = fileContent.replace(
                 configPlaceholderRegex,
-                `$1${JSON.stringify(firebaseClientConfig)};`
+                `$1${JSON.stringify(firebaseClientConfig)};` // Substitui apenas o '{}'
             );
             configInjected = true;
         } else {
-            // Fallback: Adiciona a linha se o placeholder nao for encontrado
-            const configLine = `// --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---\nconst FIREBASE_CLIENT_CONFIG = ${JSON.stringify(firebaseClientConfig)}; // Será preenchido dinamicamente\n// --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG ---\n\n`;
+            // Fallback: Adiciona a linha se o placeholder nao for encontrado (comentario em linha separada)
+            const configLine = `// --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---\n// Será preenchido dinamicamente pelo servidor\nconst FIREBASE_CLIENT_CONFIG = ${JSON.stringify(firebaseClientConfig)};\n// --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG ---\n\n`;
             fileContent = configLine + fileContent;
             configInjected = true;
             console.warn(`[SERVER] Placeholder FIREBASE_CLIENT_CONFIG NÃO ENCONTRADO em ${fileName}. Adicionado no início do arquivo.`);
         }
         console.log(`[SERVER] Injeção de config Firebase em ${fileName}: ${configInjected ? 'SUCESSO' : 'FALHA'}.`);
-        // --- FIM NOVO ---
+        // --- FIM DA CORREÇÃO ---
 
 
-        // ... (Seu código existente para injetar FIREBASE_AUTH_ID_TOKEN) ...
+        // --- O código abaixo para FIREBASE_AUTH_ID_TOKEN permanece o mesmo ---
         const tokenPlaceholderRegex = /(const\s+FIREBASE_AUTH_ID_TOKEN\s*=\s*)[^;]*;(\s*\/\/\s*Será preenchido dinamicamente)?/;
         let tokenInjected = false;
 

@@ -52,7 +52,7 @@ const ALERT_COOLDOWN_MS = 5000; // 5 segundos de cooldown para o mesmo alerta
 // --- FIM DA CONFIGURACAO DE ALERTA DE CONSTRUCAO ---
 
 // --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---
-const FIREBASE_CLIENT_CONFIG = {}; // Será preenchido dinamicamente pelo servidor
+const FIREBASE_CLIENT_CONFIG = {};
 // --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG --
 
 // --- CAMPO PARA ID TOKEN DO USUARIO (Gerado pelo Dashboard MULTCONTROL) ---

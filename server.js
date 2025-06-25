@@ -3,7 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const admin = require('firebase-admin');
-const crypto = require('crypto'); // Adicionado para gerar chaves seguras
+const crypto = require('crypto');
+const helmet = require('helmet'); // ADICIONADO: Importa a biblioteca helmet
 require('dotenv').config();
 
 const app = express();
@@ -11,11 +12,28 @@ const PORT = process.env.PORT || 3000;
 
 // Configuração do View Engine (EJS)
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname)); // Define o diretório de views como o diretório atual
+app.set('views', path.join(__dirname));
 
 // Middlewares
 app.use(cors());
-app.use(express.json()); // Para parsear JSON no corpo das requisições
+app.use(express.json());
+
+// ADICIONADO: Configuração do Helmet para Content Security Policy (CSP)
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"], // Permite carregar recursos do próprio domínio
+            scriptSrc: ["'self'", "https://www.gstatic.com", "https://apis.google.com"], // Permite scripts do próprio domínio e do Firebase
+            connectSrc: ["'self'", "https://multcontrol.onrender.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com"], // Permite requisições (fetch, XHR) para seu domínio e Firebase Auth/Firestore
+            imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://www.google.com", "https://dsbr.innogamescdn.com"], // Permite imagens de data URLs, imgur, google e tribalwars CDN
+            styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"], // Permite estilos do próprio domínio, Google Fonts e estilos inline
+            fontSrc: ["'self'", "https://fonts.gstatic.com"], // Permite fontes do próprio domínio e Google Fonts
+            objectSrc: ["'none'"], // Proíbe <object>, <embed>
+            upgradeInsecureRequests: [], // Redireciona HTTP para HTTPS automaticamente
+        },
+    },
+}));
+// FIM DO BLOCO ADICIONADO: Configuração do Helmet
 
 // Configuração do Firebase Admin SDK
 try {

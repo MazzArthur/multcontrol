@@ -8,14 +8,15 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const alerts = [];
-
+// Configuração do View Engine (EJS)
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname));
+app.set('views', path.join(__dirname)); // Define o diretório de views como o diretório atual
 
+// Middlewares
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // Para parsear JSON no corpo das requisições
 
+// Configuração do Firebase Admin SDK
 try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
     admin.initializeApp({
@@ -27,8 +28,9 @@ try {
     process.exit(1);
 }
 
-const db = admin.firestore();
+const db = admin.firestore(); // Firestore Admin SDK instance
 
+// Função para obter a configuração do Firebase Client-side a partir das variáveis de ambiente
 function getFirebaseClientConfig() {
     return {
         apiKey: process.env.FIREBASE_API_KEY,
@@ -104,6 +106,7 @@ app.get('/dashboard.html', async (req, res) => {
     });
 });
 
+// Rota para receber e salvar alertas (POST) - MANTIDA
 app.post('/alert', async (req, res) => {
     const { message } = req.body;
     const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
@@ -134,44 +137,9 @@ app.post('/alert', async (req, res) => {
     }
 });
 
-app.get('/alerts', async (req, res) => {
-    const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
+// REMOVEMOS A ROTA app.get('/alerts') pois o frontend buscará diretamente do Firestore agora.
 
-    if (!idToken) {
-        return res.status(401).send('Não autorizado. Token de autenticação ausente.');
-    }
-
-    try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const userId = decodedToken.uid;
-
-        const alertsSnapshot = await db.collection('alerts')
-            .where('userId', '==', userId)
-            .orderBy('timestamp', 'desc')
-            .get();
-
-        const userAlerts = alertsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            const timestamp = data.timestamp ? data.timestamp.toDate().toISOString() : new Date().toISOString();
-            return {
-                id: doc.id,
-                message: data.message,
-                timestamp: timestamp,
-                userId: data.userId,
-                userEmail: data.userEmail || 'N/A'
-            };
-        });
-
-        res.json(userAlerts);
-
-    } catch (error) {
-        console.error('[SERVER ERROR] Erro ao buscar alertas para o usuário:', error);
-        res.status(401).send('Não autorizado ou erro ao buscar alertas.');
-    }
-});
-
-
-// NOVA ROTA: Para o dashboard obter os scripts com o token preenchido APÓS o login do cliente
+// Rota para o dashboard obter os scripts com o token preenchido APÓS o login do cliente - MANTIDA
 app.get('/get_userscripts_with_token', async (req, res) => {
     const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
 
@@ -201,10 +169,11 @@ app.get('/get_userscripts_with_token', async (req, res) => {
 });
 
 
+// Servidor Express escutando na porta
 app.listen(PORT, () => {
+    // Estas mensagens de log são para o seu console do Render, mostrando onde o servidor está rodando.
     console.log(`Servidor rodando em http://localhost:${PORT}`);
-    console.log(`Página de login disponível em http://localhost:${PORT}/`);
-    console.log(`Endpoint de alerta (POST): http://localhost:${PORT}/alert`);
-    console.log(`Endpoint para buscar alertas (GET): http://localhost:${PORT}/alerts`);
-    console.log(`Endpoint para obter scripts com token (GET): http://localhost:${PORT}/get_userscripts_with_token`);
+    console.log(`Página de login disponível em https://multcontrol.onrender.com/`);
+    console.log(`Endpoint de alerta (POST): https://multcontrol.onrender.com/alert`);
+    console.log(`Endpoint para obter scripts com token (GET): https://multcontrol.onrender.com/get_userscripts_with_token`);
 });

@@ -313,15 +313,13 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
-    <script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script> <script>
         console.log("Configurando Firebase diretamente no HTML do dashboard...");
-        // A variável firebaseConfig deve ser preenchida pelo seu servidor EJS.
-        // Certifique-se de que seu backend está passando `firebaseConfig` para a renderização desta página.
         const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
-        console.log("Firebase e Auth inicializados via EJS.");
+        const dbClient = firebase.firestore(); // ADICIONADO: Inicializa o Firestore client-side
+        console.log("Firebase, Auth e Firestore Client-side inicializados via EJS.");
         console.log("Valor de 'auth' após inicializacao:", auth);
     </script>
 
@@ -359,11 +357,13 @@
             const captchaAlertsList = document.getElementById('captchaAlertsList');
             const buildOrderAlertsList = document.getElementById('buildOrderAlertsList');
             const attackAlertsList = document.getElementById('attackAlertsList');
-            const backendUrl = 'https://multcontrol.onrender.com';
+            
+            // backendUrl agora é usada apenas para a rota de scripts, não mais para alertas
+            const backendUrl = 'https://multcontrol.onrender.com'; 
 
             if (!userEmailDisplay || !logoutBtn || !userUidDisplay || !captchaScriptCodeElement || !upadorScriptCodeElement || !attackScriptCodeElement || !captchaAlertsList || !buildOrderAlertsList || !attackAlertsList) {
                 console.error("Um ou mais elementos HTML essenciais do dashboard não foram encontrados. Interrompendo a inicialização.");
-                return; 
+                return;
             }
 
             console.log("Todos os elementos HTML essenciais do dashboard encontrados.");
@@ -407,9 +407,106 @@
                         attackScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}. Verifique o console.`;
                     }
                     
-                    // Inicia a busca de alertas após o login
-                    setInterval(fetchAlerts, 2000);
-                    fetchAlerts();
+                    // --- NOVA LÓGICA: LISTENER DE ALERTAS EM TEMPO REAL ---
+                    console.log("[Dashboard] Configurando listener de alertas em tempo real...");
+                    dbClient.collection('alerts')
+                        .where('userId', '==', user.uid)
+                        .orderBy('timestamp', 'desc')
+                        .onSnapshot((snapshot) => {
+                            console.log("[Dashboard] Snapshot de alertas recebido!");
+                            const alerts = [];
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                const timestamp = data.timestamp ? data.timestamp.toDate().toISOString() : new Date().toISOString();
+                                alerts.push({
+                                    id: doc.id,
+                                    message: data.message,
+                                    timestamp: timestamp,
+                                    userId: data.userId,
+                                    userEmail: data.userEmail || 'N/A'
+                                });
+                            });
+
+                            // LÓGICA DE RENDERIZAÇÃO EXISTENTE (COPIADA DE fetchAlerts)
+                            captchaAlertsList.innerHTML = '';
+                            buildOrderAlertsList.innerHTML = '';
+                            attackAlertsList.innerHTML = '';
+
+                            let hasCaptchaAlerts = false;
+                            let hasBuildOrderAlerts = false;
+                            let hasAttackAlerts = false;
+
+                            alerts.forEach(alert => {
+                                const div = document.createElement('div');
+                                div.className = 'alert-item';
+
+                                const timestampSpan = document.createElement('span');
+                                timestampSpan.className = 'timestamp';
+                                
+                                const date = convertTimestampToDate(alert.timestamp);
+                                if (!isNaN(date.getTime())) {
+                                    timestampSpan.textContent = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                                } else {
+                                    timestampSpan.textContent = 'Data Inválida';
+                                    console.warn('[Dashboard] Timestamp recebido inválido:', alert.timestamp);
+                                }
+
+                                const messageSpan = document.createElement('span');
+                                messageSpan.className = 'message';
+                                
+                                const rawMessage = alert.message;
+                                const cleanMessageForCategory = rawMessage.replace(/^[^\w\s]*\s*/, '');
+
+                                let emojiPrefix = '';
+                                if (cleanMessageForCategory.includes('CAPTCHA NECESSARIO!')) {
+                                    emojiPrefix = '🚨⚠️';
+                                    div.classList.add('captcha');
+                                    captchaAlertsList.appendChild(div);
+                                    hasCaptchaAlerts = true;
+                                } else if (cleanMessageForCategory.includes('Construcao Iniciada')) {
+                                    emojiPrefix = '🚨🏰';
+                                    div.classList.add('build-order');
+                                    buildOrderAlertsList.appendChild(div);
+                                    hasBuildOrderAlerts = true;
+                                } else if (cleanMessageForCategory.includes('ATAQUE(S) NOVO(S)!')) {
+                                    emojiPrefix = '🚨⚔️';
+                                    div.classList.add('attack-alert');
+                                    attackAlertsList.appendChild(div);
+                                    hasAttackAlerts = true;
+                                } else {
+                                    emojiPrefix = 'ℹ️';
+                                    div.classList.add('general');
+                                    buildOrderAlertsList.appendChild(div);
+                                }
+                                
+                                const emojiSpan = document.createElement('span');
+                                emojiSpan.className = 'emoji-prefix';
+                                emojiSpan.textContent = emojiPrefix;
+                                messageSpan.appendChild(emojiSpan);
+                                messageSpan.appendChild(document.createTextNode(cleanMessageForCategory));
+
+                                div.appendChild(timestampSpan);
+                                div.appendChild(messageSpan);
+                            });
+
+                            if (!hasCaptchaAlerts) {
+                                captchaAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de Captcha recente.</p>';
+                            }
+                            if (!hasBuildOrderAlerts) {
+                                buildOrderAlertsList.innerHTML = '<p class="no-alerts">Nenhuma ordem de construção recente.</p>';
+                            }
+                            if (!hasAttackAlerts) {
+                                attackAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de ataque recente.</p>';
+                            }
+
+                        }, (error) => {
+                            console.error('[Dashboard] Erro ao ouvir alertas em tempo real:', error);
+                            captchaAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar alertas de Captcha.</p>';
+                            buildOrderAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar ordens de construção.</p>';
+                            attackAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar alertas de ataque.</p>';
+                        });
+                    // --- FIM DA NOVA LÓGICA ---
+
                 } else {
                     console.log('Nenhum usuário logado. Redirecionando para a página de login.');
                     window.location.href = '/';
@@ -428,162 +525,26 @@
                 }
             });
 
-            async function fetchAlerts() {
-                try {
-                    const user = auth.currentUser;
-                    if (!user) {
-                        console.log("Nenhum usuário autenticado para buscar alertas.");
-                        return;
-                    }
-                    const idToken = await user.getIdToken();
-
-                    const response = await fetch(`${backendUrl}/alerts`, {
-                        headers: {
-                            'Authorization': `Bearer ${idToken}`
-                        }
-                    });
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const alerts = await response.json();
-
-                    captchaAlertsList.innerHTML = '';
-                    buildOrderAlertsList.innerHTML = '';
-                    attackAlertsList.innerHTML = '';
-
-                    let hasCaptchaAlerts = false;
-                    let hasBuildOrderAlerts = false;
-                    let hasAttackAlerts = false;
-
-                    // Ordena os alertas do mais novo para o mais antigo
-                    alerts.sort((a, b) => {
-                        // Tenta converter timestamps para Date objects para comparação
-                        const dateA = convertTimestampToDate(a.timestamp);
-                        const dateB = convertTimestampToDate(b.timestamp);
-
-                        // Se alguma data for inválida, coloca-a no final (ou trata de outra forma)
-                        if (isNaN(dateA.getTime())) return 1;
-                        if (isNaN(dateB.getTime())) return -1;
-                        return dateB.getTime() - dateA.getTime();
-                    });
-
-                    if (alerts.length === 0) {
-                        captchaAlertsList.innerHTML = '<p class="no-alerts">Aguardando alertas de Captcha...</p>';
-                        buildOrderAlertsList.innerHTML = '<p class="no-alerts">Aguardando ordens de construção...</p>';
-                        attackAlertsList.innerHTML = '<p class="no-alerts">Aguardando alertas de ataque...</p>';
-                    } else {
-                        alerts.forEach(alert => {
-                            const div = document.createElement('div');
-                            div.className = 'alert-item';
-
-                            const timestampSpan = document.createElement('span');
-                            timestampSpan.className = 'timestamp';
-                            
-                            // Conversão de timestamp mais robusta
-                            const date = convertTimestampToDate(alert.timestamp);
-                            if (!isNaN(date.getTime())) { // Verifica se a data é válida
-                                timestampSpan.textContent = date.toLocaleTimeString('pt-BR', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    second: '2-digit'
-                                });
-                            } else {
-                                timestampSpan.textContent = 'Data Inválida';
-                                console.warn('[Dashboard] Timestamp recebido inválido:', alert.timestamp);
-                            }
-
-                            const messageSpan = document.createElement('span');
-                            messageSpan.className = 'message';
-                            
-                            // Remove o possível emoji estranho e o espaço inicial para a categorização
-                            // e também remove a string do emoji para a exibição no dashboard
-                            const rawMessage = alert.message;
-                            const cleanMessageForCategory = rawMessage.replace(/^[^\w\s]*\s*/, ''); // Remove caracteres não alfanuméricos e espaços no início
-
-                            let emojiPrefix = '';
-                            let categoryFound = false;
-
-                            // Lógica de categorização e prefixo de emoji no dashboard (sem acentos para corresponder ao script do TW)
-                            if (cleanMessageForCategory.includes('CAPTCHA NECESSARIO!')) {
-                                emojiPrefix = '🚨⚠️';
-                                div.classList.add('captcha');
-                                captchaAlertsList.appendChild(div);
-                                hasCaptchaAlerts = true;
-                                categoryFound = true;
-                            } else if (cleanMessageForCategory.includes('Construcao Iniciada')) {
-                                emojiPrefix = '🚨🏰';
-                                div.classList.add('build-order');
-                                buildOrderAlertsList.appendChild(div);
-                                hasBuildOrderAlerts = true;
-                                categoryFound = true;
-                            } else if (cleanMessageForCategory.includes('ATAQUE(S) NOVO(S)!')) {
-                                emojiPrefix = '🚨⚔️';
-                                div.classList.add('attack-alert');
-                                attackAlertsList.appendChild(div);
-                                hasAttackAlerts = true;
-                                categoryFound = true;
-                            } else {
-                                // Caso não se encaixe em nenhuma categoria específica
-                                emojiPrefix = 'ℹ️'; // Emoji padrão para alertas gerais
-                                div.classList.add('general');
-                                buildOrderAlertsList.appendChild(div); // Coloca em alguma lista por padrão
-                            }
-                            
-                            // Adiciona o prefixo de emoji como um span separado para melhor controle CSS
-                            const emojiSpan = document.createElement('span');
-                            emojiSpan.className = 'emoji-prefix';
-                            emojiSpan.textContent = emojiPrefix;
-                            messageSpan.appendChild(emojiSpan);
-
-                            // Adiciona o restante da mensagem (removendo qualquer prefixo de emoji original do script do TW)
-                            messageSpan.appendChild(document.createTextNode(cleanMessageForCategory));
-
-                            div.appendChild(timestampSpan);
-                            div.appendChild(messageSpan);
-                        });
-
-                        if (!hasCaptchaAlerts) {
-                            captchaAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de Captcha recente.</p>';
-                        }
-                        if (!hasBuildOrderAlerts) {
-                            buildOrderAlertsList.innerHTML = '<p class="no-alerts">Nenhuma ordem de construção recente.</p>';
-                        }
-                        if (!hasAttackAlerts) {
-                            attackAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de ataque recente.</p>';
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erro ao buscar alertas:', error);
-                    captchaAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar alertas de Captcha.</p>';
-                    buildOrderAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar ordens de construção.</p>';
-                    attackAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar alertas de ataque.</p>';
-                }
-            }
-
-            // Nova função auxiliar para converter o timestamp de forma robusta
+            // Sua função auxiliar para converter o timestamp (mantenha-a aqui)
             function convertTimestampToDate(timestamp) {
                 if (timestamp instanceof Date) {
-                    return timestamp; // Já é um objeto Date
+                    return timestamp;
                 }
                 if (typeof timestamp === 'string') {
-                    // Tenta parsear como string ISO ou outra string de data
                     const date = new Date(timestamp);
                     if (!isNaN(date.getTime())) {
                         return date;
                     }
                 }
                 if (typeof timestamp === 'object' && timestamp !== null) {
-                    // Tenta acessar _seconds e _nanoseconds, que é o formato do Firestore Timestamp
                     if (timestamp._seconds !== undefined && timestamp._nanoseconds !== undefined) {
                         return new Date(timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000);
                     }
-                    // Caso o objeto tenha um método toDate (ex: serialização personalizada do backend)
                     if (typeof timestamp.toDate === 'function') {
                         return timestamp.toDate();
                     }
                 }
-                // Retorna uma data inválida se nenhum formato for reconhecido
-                return new Date('invalid date'); 
+                return new Date('invalid date');
             }
 
         } // Fim de initializeDashboardPage

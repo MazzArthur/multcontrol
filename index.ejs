@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MULTCONTROL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .login-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        .input-group input {
+            width: calc(100% - 20px);
+            padding: 12px 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus {
+            border-color: #2196F3;
+            outline: none;
+        }
+        .button-group {
+            margin-top: 30px;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 14px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .forgot-password {
+            margin-top: -5px; /* Ajusta a margem para ficar mais perto do input */
+            margin-bottom: 20px; /* Espaço abaixo do link */
+            text-align: right;
+        }
+        .forgot-password a {
+            color: #2196F3;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: color 0.3s ease;
+        }
+        .forgot-password a:hover {
+            color: #1976D2;
+            text-decoration: underline;
+        }
+        .message {
+            margin-top: 20px;
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .success-message {
+            color: #4CAF50;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2196F3;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Login no MULTCONTROL</h1>
+        <div class="input-group">
+            <label for="email">E-mail:</label>
+            <input type="email" id="email" placeholder="seuemail@exemplo.com" required>
+        </div>
+        <div class="input-group">
+            <label for="password">Senha:</label>
+            <input type="password" id="password" placeholder="Sua senha" required>
+        </div>
+        <div class="forgot-password">
+            <a href="#" id="forgotPasswordLink">Esqueceu a senha?</a>
+        </div>
+        <div class="button-group">
+            <button id="loginBtn">Entrar</button>
+            <button id="signupBtn">Registrar</button>
+            <div class="loader" id="loader"></div>
+            <p class="message" id="message"></p>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <script>
+        console.log("Configurando Firebase diretamente no HTML...");
+        const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        console.log("Firebase e Auth inicializados via EJS.");
+        console.log("Valor de 'auth' após inicializacao:", auth);
+    </script>
+
+    <script>
+        console.log("Script principal de login carregado.");
+        
+        initializeLoginPage();
+
+
+        function initializeLoginPage() {
+            console.log("Função initializeLoginPage() iniciada.");
+
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.getElementById('loginBtn');
+            const signupBtn = document.getElementById('signupBtn');
+            const forgotPasswordLink = document.getElementById('forgotPasswordLink'); // Novo elemento
+            const messageDisplay = document.getElementById('message');
+            const loader = document.getElementById('loader');
+
+            if (!emailInput) console.error("Elemento #email não encontrado!");
+            if (!passwordInput) console.error("Elemento #password não encontrado!");
+            if (!loginBtn) console.error("Elemento #loginBtn não encontrado!");
+            if (!signupBtn) console.error("Elemento #signupBtn não encontrado!");
+            if (!forgotPasswordLink) console.error("Elemento #forgotPasswordLink não encontrado!"); // Novo erro
+            if (!messageDisplay) console.error("Elemento #message não encontrado!");
+            if (!loader) console.error("Elemento #loader não encontrado!");
+
+            if (!emailInput || !passwordInput || !loginBtn || !signupBtn || !forgotPasswordLink || !messageDisplay || !loader) {
+                console.error("Um ou mais elementos HTML essenciais não foram encontrados. Interrompendo a inicialização da página de login.");
+                return;
+            }
+
+            console.log("Todos os elementos HTML essenciais encontrados.");
+
+            function showLoading(isLoading) {
+                if (isLoading) {
+                    loader.style.display = 'block';
+                    loginBtn.disabled = true;
+                    signupBtn.disabled = true;
+                    forgotPasswordLink.style.pointerEvents = 'none'; // Desabilita o link também
+                    emailInput.disabled = true;
+                    passwordInput.disabled = true;
+                    messageDisplay.textContent = '';
+                } else {
+                    loader.style.display = 'none';
+                    loginBtn.disabled = false;
+                    signupBtn.disabled = false;
+                    forgotPasswordLink.style.pointerEvents = 'auto'; // Habilita o link
+                    emailInput.disabled = false;
+                    passwordInput.disabled = false;
+                }
+            }
+
+            function displayMessage(text, isError = true) {
+                messageDisplay.textContent = text;
+                messageDisplay.className = 'message ' + (isError ? '' : 'success-message');
+            }
+
+            loginBtn.addEventListener('click', async () => {
+                console.log("Botão Entrar clicado.");
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                if (!email || !password) {
+                    displayMessage('Por favor, preencha todos os campos.');
+                    return;
+                }
+
+                showLoading(true);
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                    displayMessage('Login realizado com sucesso!', false);
+                    console.log('Usuário logado:', auth.currentUser.email);
+                    window.location.href = '/dashboard.html';
+                } catch (error) {
+                    console.error('Erro no login:', error.code, error.message);
+                    let errorMessage = 'Erro ao fazer login. Verifique suas credenciais.';
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                        errorMessage = 'E-mail ou senha inválidos.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = 'Formato de e-mail inválido.';
+                    } else if (error.code === 'auth/too-many-requests') {
+                        errorMessage = 'Muitas tentativas de login. Tente novamente mais tarde.';
+                    }
+                    displayMessage(errorMessage);
+                } finally {
+                    showLoading(false);
+                }
+            });
+
+            signupBtn.addEventListener('click', async () => {
+                console.log("Botão Registrar clicado.");
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                if (!email || !password) {
+                    displayMessage('Por favor, preencha todos os campos.');
+                    return;
+                }
+                if (password.length < 6) {
+                    displayMessage('A senha deve ter pelo menos 6 caracteres.');
+                    return;
+                }
+
+                showLoading(true);
+                try {
+                    await auth.createUserWithEmailAndPassword(email, password);
+                    displayMessage('Registro realizado com sucesso! Você já está logado.', false);
+                    console.log('Usuário registrado e logado:', auth.currentUser.email);
+                    window.location.href = '/dashboard.html';
+                } catch (error) {
+                    console.error('Erro no registro:', error.code, error.message);
+                    let errorMessage = 'Erro ao registrar usuário.';
+                    if (error.code === 'auth/email-already-in-use') {
+                        errorMessage = 'Este e-mail já está em uso.';
+                    } else if (error.code === 'auth/weak-password') {
+                        errorMessage = 'A senha é muito fraca (mínimo 6 caracteres).';
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = 'Formato de e-mail inválido.';
+                    }
+                    displayMessage(errorMessage);
+                } finally {
+                    showLoading(false);
+                }
+            });
+
+            // NOVA LÓGICA PARA "ESQUECEU A SENHA?"
+            forgotPasswordLink.addEventListener('click', async (event) => {
+                event.preventDefault(); // Impede o comportamento padrao do link
+                console.log("Link 'Esqueceu a senha?' clicado.");
+
+                const email = emailInput.value;
+                if (!email) {
+                    displayMessage('Por favor, digite seu e-mail para redefinir a senha.');
+                    return;
+                }
+
+                showLoading(true);
+                try {
+                    await auth.sendPasswordResetEmail(email); // 
+                    displayMessage(`Um e-mail para redefinir sua senha foi enviado para ${email}. Verifique sua caixa de entrada.`, false);
+                    console.log('E-mail de redefinição de senha enviado para:', email);
+                } catch (error) {
+                    console.error('Erro ao enviar e-mail de redefinição:', error.code, error.message);
+                    let errorMessage = 'Erro ao redefinir senha. Verifique o e-mail digitado ou tente novamente.';
+                    if (error.code === 'auth/user-not-found') {
+                        errorMessage = 'Não há usuário com este e-mail.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = 'Formato de e-mail inválido.';
+                    }
+                    displayMessage(errorMessage);
+                } finally {
+                    showLoading(false);
+                }
+            });
+
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    console.log('Usuário já logado:', user.email);
+                    window.location.href = '/dashboard.html';
+                } else {
+                    console.log('Nenhum usuário logado.');
+                }
+            });
+        } // Fim de initializeLoginPage
+    </script>
+</body>
+</html>

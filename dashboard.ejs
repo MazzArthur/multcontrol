@@ -345,6 +345,25 @@
             }
         };
 
+        // Função para solicitar permissão de notificação na área de trabalho
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                console.warn("Este navegador não suporta notificações de desktop.");
+            } else if (Notification.permission === "default") {
+                // Solicita a permissão apenas se ainda não foi concedida ou negada
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        console.log("Permissão para notificações concedida.");
+                    } else if (permission === "denied") {
+                        console.warn("Permissão para notificações negada. Notificações de desktop não serão mostradas.");
+                    }
+                }).catch(error => {
+                    console.error("Erro ao solicitar permissão de notificação:", error);
+                });
+            }
+        }
+
+
         function initializeDashboardPage() {
             console.log("Função initializeDashboardPage() iniciada.");
 
@@ -354,7 +373,7 @@
             
             const captchaScriptCodeElement = document.getElementById('captchaScriptCode');
             const upadorScriptCodeElement = document.getElementById('upadorScriptCode');
-            const attackScriptCodeElement = document.getElementById('attackScriptCode'); // Corrigido aqui (apenas 1 =)
+            const attackScriptCodeElement = document.getElementById('attackScriptCode'); // CORRIGIDO AQUI
 
             const captchaAlertsList = document.getElementById('captchaAlertsList');
             const buildOrderAlertsList = document.getElementById('buildOrderAlertsList');
@@ -382,6 +401,9 @@
                     console.log('Usuário logado no dashboard:', user.email);
                     userEmailDisplay.textContent = `Logado como: ${user.email}`;
                     userUidDisplay.textContent = user.uid;
+
+                    // --- SOLICITA PERMISSÃO DE NOTIFICAÇÃO AO AUTENTICAR ---
+                    requestNotificationPermission(); // Chamada aqui
 
                     try {
                         const idToken = await user.getIdToken();
@@ -417,19 +439,46 @@
                         .onSnapshot((snapshot) => {
                             console.log("[Dashboard] Snapshot de alertas recebido!");
                             const alerts = [];
-                            snapshot.forEach(doc => {
-                                const data = doc.data();
+                            
+                            // Use docChanges para identificar apenas os novos documentos e notificar
+                            snapshot.docChanges().forEach(change => {
+                                if (change.type === "added") { // Detecta um novo documento
+                                    const newAlertData = change.doc.data();
+                                    const alertMessage = newAlertData.message;
+                                    const userEmail = newAlertData.userEmail || 'N/A'; // Pega o email do alerta
+                                    const nickname = userEmail.split('@')[0] || 'Desconhecido'; // Extrai nickname do email
+
+                                    // Disparar notificação apenas se a aba não estiver em foco
+                                    if (document.hidden && Notification.permission === "granted") {
+                                        if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
+                                            new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", {
+                                                body: `Captcha detectado para a conta: ${nickname}`,
+                                                icon: 'https://www.google.com/favicon.ico'
+                                            });
+                                            console.log("[Dashboard] Notificação de Captcha disparada.");
+                                        } else if (alertMessage.includes('ATAQUE(S) NOVO(S)!')) {
+                                            new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", {
+                                                body: `A conta ${nickname} tem novos ataques a chegar!`,
+                                                icon: 'https://dsbr.innogamescdn.com/asset/75cb846c/graphic/unit/att.webp'
+                                            });
+                                            console.log("[Dashboard] Notificação de Ataque disparada.");
+                                        }
+                                    }
+                                }
+                                // Reconstroi a lista completa de alertas para renderizar (mesmo para 'modified'/'removed')
+                                const data = change.doc.data();
                                 const timestamp = data.timestamp ? data.timestamp.toDate().toISOString() : new Date().toISOString();
                                 alerts.push({
-                                    id: doc.id,
+                                    id: change.doc.id,
                                     message: data.message,
                                     timestamp: timestamp,
                                     userId: data.userId,
                                     userEmail: data.userEmail || 'N/A'
                                 });
                             });
-
-                            // LÓGICA DE RENDERIZAÇÃO EXISTENTE (COPIADA DE fetchAlerts)
+                            
+                            // Otimização: Apenas renderiza se houver mudanças que afetam a lista final
+                            // (removido o if alerts.length > 0 para sempre limpar e renderizar)
                             captchaAlertsList.innerHTML = '';
                             buildOrderAlertsList.innerHTML = '';
                             attackAlertsList.innerHTML = '';
@@ -437,6 +486,15 @@
                             let hasCaptchaAlerts = false;
                             let hasBuildOrderAlerts = false;
                             let hasAttackAlerts = false;
+
+                            // Ordena os alertas do mais novo para o mais antigo para a UI
+                            alerts.sort((a, b) => {
+                                const dateA = convertTimestampToDate(a.timestamp);
+                                const dateB = convertTimestampToDate(b.timestamp);
+                                if (isNaN(dateA.getTime())) return 1;
+                                if (isNaN(dateB.getTime())) return -1;
+                                return dateB.getTime() - dateA.getTime();
+                            });
 
                             alerts.forEach(alert => {
                                 const div = document.createElement('div');

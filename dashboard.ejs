@@ -396,14 +396,36 @@
                 });
             });
 
+            // --- NOVO: Botão para ativar notificações ---
+            const activateNotificationsButton = document.createElement('button');
+            activateNotificationsButton.id = 'activateNotificationsBtn';
+            activateNotificationsButton.textContent = 'Ativar Notificações Desktop';
+            // Adicione um pouco de estilo se quiser
+            activateNotificationsButton.style.backgroundColor = '#4CAF50';
+            activateNotificationsButton.style.marginTop = '20px';
+            activateNotificationsButton.style.marginBottom = '20px';
+            activateNotificationsButton.style.padding = '10px 20px';
+            activateNotificationsButton.style.border = 'none';
+            activateNotificationsButton.style.borderRadius = '8px';
+            activateNotificationsButton.style.color = 'white';
+            activateNotificationsButton.style.cursor = 'pointer';
+            activateNotificationsButton.style.fontSize = '1em';
+            
+            // Adicionar o botão logo abaixo da seção de script generation
+            document.querySelector('.script-generation-section').after(activateNotificationsButton);
+
+            activateNotificationsButton.addEventListener('click', requestNotificationPermission);
+            // --- FIM NOVO BOTÃO ---
+
+
             auth.onAuthStateChanged(async user => {
                 if (user) {
                     console.log('Usuário logado no dashboard:', user.email);
                     userEmailDisplay.textContent = `Logado como: ${user.email}`;
                     userUidDisplay.textContent = user.uid;
 
-                    // --- SOLICITA PERMISSÃO DE NOTIFICAÇÃO AO AUTENTICAR ---
-                    requestNotificationPermission(); // Chamada aqui
+                    // REMOVIDO: requestNotificationPermission() chamada aqui
+                    // Ela será chamada pelo clique do botão agora.
 
                     try {
                         const idToken = await user.getIdToken();
@@ -448,7 +470,7 @@
                                     const userEmail = newAlertData.userEmail || 'N/A'; // Pega o email do alerta
                                     const nickname = userEmail.split('@')[0] || 'Desconhecido'; // Extrai nickname do email
 
-                                    // Disparar notificação apenas se a aba não estiver em foco
+                                    // Disparar notificação apenas se a aba não estiver em foco e permissão concedida
                                     if (document.hidden && Notification.permission === "granted") {
                                         if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
                                             new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", {

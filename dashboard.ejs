@@ -417,45 +417,19 @@
                         .onSnapshot((snapshot) => {
                             console.log("[Dashboard] Snapshot de alertas recebido!");
                             const alerts = [];
-                            
-                            // Use docChanges para identificar apenas os novos documentos e notificar
-                            snapshot.docChanges().forEach(change => {
-                                if (change.type === "added") { // Detecta um novo documento
-                                    const newAlertData = change.doc.data();
-                                    const alertMessage = newAlertData.message;
-                                    const nickname = newAlertData.userEmail.split('@')[0] || 'Desconhecido'; // Extrai nickname do email
-
-                                    // Disparar notificação apenas se a aba não estiver em foco
-                                    if (document.hidden && Notification.permission === "granted") {
-                                        if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
-                                            new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", {
-                                                body: `Captcha detectado para a conta: ${nickname}`,
-                                                icon: 'https://www.google.com/favicon.ico'
-                                            });
-                                            console.log("[Dashboard] Notificação de Captcha disparada.");
-                                        } else if (alertMessage.includes('ATAQUE(S) NOVO(S)!')) {
-                                            new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", {
-                                                body: `A conta ${nickname} tem novos ataques a chegar!`,
-                                                icon: 'https://dsbr.innogamescdn.com/asset/75cb846c/graphic/unit/att.webp'
-                                            });
-                                            console.log("[Dashboard] Notificação de Ataque disparada.");
-                                        }
-                                    }
-                                }
-                                // Reconstroi a lista completa de alertas para renderizar (mesmo para 'modified'/'removed')
-                                const data = change.doc.data();
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
                                 const timestamp = data.timestamp ? data.timestamp.toDate().toISOString() : new Date().toISOString();
                                 alerts.push({
-                                    id: change.doc.id,
+                                    id: doc.id,
                                     message: data.message,
                                     timestamp: timestamp,
                                     userId: data.userId,
                                     userEmail: data.userEmail || 'N/A'
                                 });
                             });
-                            
-                            // Otimização: Apenas renderiza se houver mudanças que afetam a lista final
-                            // (removido o if alerts.length > 0 para sempre limpar e renderizar)
+
+                            // LÓGICA DE RENDERIZAÇÃO EXISTENTE (COPIADA DE fetchAlerts)
                             captchaAlertsList.innerHTML = '';
                             buildOrderAlertsList.innerHTML = '';
                             attackAlertsList.innerHTML = '';
@@ -463,15 +437,6 @@
                             let hasCaptchaAlerts = false;
                             let hasBuildOrderAlerts = false;
                             let hasAttackAlerts = false;
-
-                            // Ordena os alertas do mais novo para o mais antigo para a UI
-                            alerts.sort((a, b) => {
-                                const dateA = convertTimestampToDate(a.timestamp);
-                                const dateB = convertTimestampToDate(b.timestamp);
-                                if (isNaN(dateA.getTime())) return 1;
-                                if (isNaN(dateB.getTime())) return -1;
-                                return dateB.getTime() - dateA.getTime();
-                            });
 
                             alerts.forEach(alert => {
                                 const div = document.createElement('div');

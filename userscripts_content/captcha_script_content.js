@@ -8,6 +8,7 @@
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
 // @grant        GM_getValue
+// @grant        GM_setValue
 // @grant        GM_notification
 // @grant        unsafeWindow
 // @grant        GM_xmlhttpRequest

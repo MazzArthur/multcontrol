@@ -465,7 +465,7 @@
                                     const userEmail = newAlertData.userEmail || 'N/A';
                                     const nickname = userEmail.split('@')[0] || 'Desconhecido';
 
-                                    // Disparar notificação apenas se a aba não estiver em foco e permissão concedida
+                                    // Disparar notificação apenas se a aba não estiver em foco
                                     if (document.hidden && Notification.permission === "granted") {
                                         if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
                                             new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", {

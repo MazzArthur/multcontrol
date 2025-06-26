@@ -4,13 +4,13 @@
 // @description  Seu script para detectar e alertar sobre Captchas.
 // @author       MazzArthur
 // @include      http*://*.*game.php*
-// @version      0.1.1 // Incrementada a versão
+// @version      0.1.2 // Incrementada a versão para a correção de autenticação
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
 // @grant        GM_getValue
+// @grant        GM_notification
 // @grant        unsafeWindow
 // @grant        GM_xmlhttpRequest
-// @grant        GM_notification
 // @require      http://code.jquery.com/jquery-1.12.4.min.js
 // @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
 // @require      https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js
@@ -29,14 +29,31 @@ const ALERT_COOLDOWN_MS = 10000; // 10 segundos de cooldown
 const FIREBASE_CLIENT_CONFIG = {};
 // --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG --
 
-// --- CAMPO PARA ID TOKEN DO USUARIO (Gerado pelo Dashboard MULTCONTROL) ---
-const FIREBASE_AUTH_ID_TOKEN = ""; // O script obterá o token fresco. Este valor será ignorado.
-// --- FIM DO CAMPO PARA ID TOKEN --
+// --- CAMPO PARA USERSCRIPT API KEY (Gerada no Dashboard MULTCONTROL) ---
+const USERSCRIPT_API_KEY = ""; // Placeholder, será preenchido pelo servidor
+// --- FIM DO CAMPO PARA USERSCRIPT API KEY --
 
 //*************************** /CONFIGURACAO ***************************//
 
+// Inicializa Firebase Client SDK no script e gerencia autenticação
+let appClient;
+let authClient;
+let currentUserFirebase = null; // Para armazenar o usuario logado no Tampermonkey
 
-// --- FUNCOES AUXILIARES ---
+try {
+    if (typeof firebase !== 'undefined' && FIREBASE_CLIENT_CONFIG && Object.keys(FIREBASE_CLIENT_CONFIG).length > 0) {
+        appClient = firebase.initializeApp(FIREBASE_CLIENT_CONFIG, "TWCaptchaApp-" + Date.now()); // Nome único
+        authClient = appClient.auth();
+        console.log('[TW Script - Captcha] Firebase Client SDK inicializado com config injetada.');
+    } else {
+        console.warn('[TW Script - Captcha] Firebase Client SDK não inicializado. Config ausente ou inválida. O token dinâmico não funcionará.');
+    }
+} catch (e) {
+    console.error('[TW Script ERROR - Captcha] Erro ao inicializar Firebase Client SDK no script:', e);
+}
+
+
+// --- FUNÇÕES AUXILIARES ---
 function getNickname() {
     const nicknameElement = document.querySelector("#menu_row > td:nth-child(11) > table > tbody > tr:nth-child(1) > td > a");
     if (!nicknameElement) {
@@ -45,36 +62,52 @@ function getNickname() {
     return nicknameElement ? nicknameElement.textContent.trim() : "Desconhecido";
 }
 
-// sendAlert agora é async
-async function sendAlert(message, user) { // Adicionado 'user' como parametro
+// sendAlert agora é async e gerencia o token
+async function sendAlert(message) { // Removido 'user' como parametro, usaremos currentUserFirebase
     return new Promise(async (resolve, reject) => {
         if (!ALERTA_CAPTCHA_ATIVADO) {
             console.log('[TW Script - Captcha] Alerta de captcha desativado nas configuracoes.');
             return resolve();
         }
 
-        let idToken;
-        try {
-            // Verifica se o user foi passado e se ele eh um objeto de usuario valido
-            if (!user || typeof user.getIdToken !== 'function') {
-                console.error('[Tampermonkey ERROR] Objeto de usuario invalido para obter ID Token. Login necessario no dashboard.');
-                return reject(new Error("Usuario invalido para obter ID Token."));
+        let idTokenForAlert;
+        const CACHED_ID_TOKEN_KEY = 'twmc_captcha_id_token'; // Chave única
+        const CACHED_TOKEN_EXPIRY_KEY = 'twmc_captcha_id_token_expiry';
+        const now = Date.now();
+
+        const cachedToken = GM_getValue(CACHED_ID_TOKEN_KEY);
+        const cachedExpiry = GM_getValue(CACHED_TOKEN_EXPIRY_KEY);
+
+        if (cachedToken && cachedExpiry && now < cachedExpiry - (5 * 60 * 1000)) { // Expira 5min antes
+            idTokenForAlert = cachedToken;
+            console.log('[TW Script - Captcha] Usando ID Token do cache.');
+        } else {
+            console.log('[TW Script - Captcha] ID Token expirado ou não encontrado no cache. Obtendo novo...');
+            try {
+                if (!currentUserFirebase || typeof currentUserFirebase.getIdToken !== 'function') {
+                    console.error('[TW Script - Captcha ERROR] Usuario Firebase nao autenticado no script. Nao ha como obter ID Token.');
+                    return reject(new Error("Usuario Firebase nao autenticado no script."));
+                }
+                idTokenForAlert = await currentUserFirebase.getIdToken();
+                const idTokenResult = await currentUserFirebase.getIdTokenResult();
+                GM_setValue(CACHED_ID_TOKEN_KEY, idTokenForAlert);
+                GM_setValue(CACHED_TOKEN_EXPIRY_KEY, new Date(idTokenResult.expirationTime).getTime());
+                console.log('[TW Script - Captcha] ID Token fresco obtido e salvo no cache.');
+
+            } catch (error) {
+                console.error('[TW Script - Captcha ERROR] Erro ao obter ID Token fresco:', error);
+                return reject(new Error("Falha ao obter ID Token fresco."));
             }
-            idToken = await user.getIdToken(); // OBTÉM TOKEN FRESCO DO USUARIO PASSADO
-            console.log('[Tampermonkey - Captcha] ID Token fresco obtido com sucesso.');
-        } catch (error) {
-            console.error('[Tampermonkey - Captcha ERROR] Erro ao obter ID Token fresco no script:', error);
-            return reject(error);
         }
 
         const currentTime = Date.now();
-        const alertId = 'captcha_alert'; // Um ID fixo para alertas de captcha
+        const alertId = 'captcha_alert'; // Um ID fixo
         if (lastCaptchaAlertSent.id === alertId && (currentTime - lastCaptchaAlertSent.timestamp < ALERT_COOLDOWN_MS)) {
             console.log(`[TW Script - Captcha] Alerta de captcha ignorado: cooldown ativo.`);
             return resolve();
         }
 
-        const fullMessage = `CAPTCHA NECESSARIO! Conta "${getNickname()}" precisa resolver um Captcha agora!`; // Use a mensagem completa com nickname
+        const fullMessage = `🚨⚠️ CAPTCHA NECESSARIO! Conta "${getNickname()}" precisa resolver um Captcha agora!`;
 
         console.log(`[TW Script - Captcha] ENVIANDO ALERTA DE CAPTCHA: "${fullMessage}" para ${ALERT_SERVER_URL}`);
 
@@ -88,7 +121,7 @@ async function sendAlert(message, user) { // Adicionado 'user' como parametro
             url: ALERT_SERVER_URL,
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${idToken}`
+                "Authorization": `Bearer ${idTokenForAlert}`
             },
             data: JSON.stringify({ message: fullMessage }),
             onload: function(response) { console.log("[Tampermonkey - Captcha] Alerta enviado com sucesso.", response.responseText); resolve(response); },
@@ -124,43 +157,25 @@ function showNativeNotification(title, body, icon = "https://www.google.com/favi
     console.log("[Tampermonkey DEBUG] Script 'Alerta de Captcha (FUSAO FINAL)' iniciado.");
     console.log("----------------------------------------------------------------------------------");
 
-    // --- INICIALIZACAO FIREBASE CLIENT E VERIFICACAO DE AUTENTICACAO ---
-    let appClient;
-    let authClient;
-
-    try {
-        if (typeof firebase !== 'undefined' && FIREBASE_CLIENT_CONFIG && Object.keys(FIREBASE_CLIENT_CONFIG).length > 0) {
-            appClient = firebase.initializeApp(FIREBASE_CLIENT_CONFIG, "captchaApp"); // Use um nome diferente para a app
-            authClient = appClient.auth();
-            console.log('[TW Script - Captcha] Firebase Client SDK inicializado com config injetada.');
-        } else {
-            console.warn('[TW Script - Captcha] Firebase Client SDK não inicializado. Config ausente ou inválida. O token dinâmico não funcionará.');
-        }
-    } catch (e) {
-        console.error('[TW Script ERROR - Captcha] Erro ao inicializar Firebase Client SDK no script:', e);
-    }
-
     // Espera pelo estado de autenticacao do Firebase
-    if (authClient) {
+    if (authClient) { // Só entra aqui se o Firebase Client SDK foi inicializado
         authClient.onAuthStateChanged(async (user) => {
             if (user) {
                 console.log(`[TW Script - Captcha] Usuario Firebase logado: ${user.email} (UID: ${user.uid}).`);
+                currentUserFirebase = user; // Define o usuario logado globalmente
+                
                 // --- AQUI COMEÇA A LÓGICA PRINCIPAL DO SEU SCRIPT DE CAPTCHA ---
-                // Agora que o usuario esta logado, podemos iniciar a verificacao de captcha e enviar alertas
-                const captchaCheckInterval = setInterval(async function() {
+                const captchaCheckInterval = setInterval(async function() { // Torne a função do setInterval async
                     const initialButton = document.querySelector("#inner-border > table > tbody > tr:nth-child(1) > td > a");
 
                     if (initialButton) {
                         clearInterval(captchaCheckInterval);
                         const nickname = getNickname();
-                        // MENSAGEM PARA O SERVIDOR (SEM ACENTOS, SEM EMOJI)
                         const captchaMessage = `CAPTCHA NECESSARIO! A conta "${nickname}" precisa resolver um Captcha agora!`;
                         
-                        // Passa o objeto 'user' para sendAlert
-                        await sendAlert(captchaMessage, user); 
+                        await sendAlert(captchaMessage); // Adicionado 'await'
                         
-                        // Notificação nativa (PODE TER EMOJI e ACENTOS)
-                        showNativeNotification("Acao Necessaria!", `A conta "${nickname}" precisa resolver um Captcha!`);
+                        showNativeNotification("⚠️ Acao Necessaria! ⚠️", `A conta "${nickname}" precisa resolver um Captcha!`);
                         initialButton.click();
                         setTimeout(function() {
                             const logoutButton = document.querySelector("#linkContainer > a:nth-child(7)");
@@ -173,11 +188,44 @@ function showNativeNotification(title, body, icon = "https://www.google.com/favi
                 // --- FIM DA LÓGICA PRINCIPAL DO SEU SCRIPT DE CAPTCHA ---
 
             } else {
-                console.warn('[TW Script - Captcha] Nenhum usuario Firebase logado. Alertas de captcha nao serao enviados.');
-                // Pode adicionar uma lógica para notificar o usuário que ele precisa logar no dashboard
+                console.warn('[TW Script - Captcha] Nenhum usuario Firebase logado. Tentando login com Userscript API Key...');
+                // Tenta autenticar se não houver user logado (só se authClient estiver disponível)
+                if (authClient && USERSCRIPT_API_KEY && USERSCRIPT_API_KEY !== "") {
+                    try {
+                        const tokenResponse = await new Promise((res, rej) => {
+                            GM_xmlhttpRequest({
+                                method: "POST",
+                                url: "https://multcontrol.onrender.com/api/get_fresh_id_token",
+                                headers: { "Authorization": `Bearer ${USERSCRIPT_API_KEY}` },
+                                onload: function(response) { res(response); },
+                                onerror: function(error) { rej(error); }
+                            });
+                        });
+
+                        if (tokenResponse.status !== 200) {
+                            throw new Error(`Falha ao obter Custom Token: Status ${tokenResponse.status}. Resposta: ${tokenResponse.responseText}`);
+                        }
+                        const customTokenData = JSON.parse(tokenResponse.responseText);
+                        const customToken = customTokenData.customToken;
+                        
+                        // Faz login com Custom Token
+                        await authClient.signInWithCustomToken(customToken);
+                        // Após o signInWithCustomToken, onAuthStateChanged será disparado novamente com o usuário.
+                        // A lógica principal será iniciada no novo disparo.
+                        console.log('[TW Script - Captcha] Login com Custom Token bem-sucedido no script. onAuthStateChanged será disparado novamente.');
+
+                    } catch (error) {
+                        console.error('[TW Script ERROR - Captcha] Falha no login com Userscript API Key ou Custom Token:', error.message);
+                        console.warn('[TW Script - Captcha] Alertas não serão enviados devido a falha de autenticação.');
+                    }
+                } else {
+                    console.error('[TW Script ERROR - Captcha] Autenticação do script falhou: USERSCRIPT_API_KEY ausente ou Firebase Client não inicializado.');
+                    console.warn('[TW Script - Captcha] Alertas não serão enviados devido a falha de autenticação.');
+                }
             }
         });
     } else {
-        console.error('[TW Script - Captcha] authClient nao inicializado. Nao foi possivel monitorar o estado de autenticacao.');
+        console.error('[TW Script ERROR - Captcha] Firebase Client SDK ou authClient não está disponível. Não é possível monitorar o estado de autenticação.');
+        console.warn('[TW Script - Captcha] Alertas não serão enviados.');
     }
 })();

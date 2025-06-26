@@ -288,6 +288,10 @@
         </div>
     </div>
 
+    <button id="activateNotificationsBtn" 
+            style="background-color: #4CAF50; margin-top: 20px; margin-bottom: 20px; padding: 10px 20px; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 1em; font-weight: bold;">
+        Ativar Notificações Desktop
+    </button>
     <div class="main-container">
         <div class="alert-box captcha-box">
             <h2>Alertas de Captcha</h2>
@@ -354,12 +358,19 @@
                 Notification.requestPermission().then(permission => {
                     if (permission === "granted") {
                         console.log("Permissão para notificações concedida.");
+                        alert('Notificações de desktop ativadas!');
                     } else if (permission === "denied") {
                         console.warn("Permissão para notificações negada. Notificações de desktop não serão mostradas.");
+                        alert('Permissão para notificações negada. Por favor, altere nas configurações do navegador.');
                     }
                 }).catch(error => {
                     console.error("Erro ao solicitar permissão de notificação:", error);
+                    alert('Erro ao ativar notificações. Tente novamente.');
                 });
+            } else if (Notification.permission === "granted") {
+                alert('As notificações já estão ativadas.');
+            } else if (Notification.permission === "denied") {
+                 alert('As notificações estão bloqueadas. Por favor, permita nas configurações do navegador.');
             }
         }
 
@@ -396,26 +407,11 @@
                 });
             });
 
-            // --- NOVO: Botão para ativar notificações ---
-            const activateNotificationsButton = document.createElement('button');
-            activateNotificationsButton.id = 'activateNotificationsBtn';
-            activateNotificationsButton.textContent = 'Ativar Notificações Desktop';
-            // Adicione um pouco de estilo se quiser
-            activateNotificationsButton.style.backgroundColor = '#4CAF50';
-            activateNotificationsButton.style.marginTop = '20px';
-            activateNotificationsButton.style.marginBottom = '20px';
-            activateNotificationsButton.style.padding = '10px 20px';
-            activateNotificationsButton.style.border = 'none';
-            activateNotificationsButton.style.borderRadius = '8px';
-            activateNotificationsButton.style.color = 'white';
-            activateNotificationsButton.style.cursor = 'pointer';
-            activateNotificationsButton.style.fontSize = '1em';
-            
-            // Adicionar o botão logo abaixo da seção de script generation
-            document.querySelector('.script-generation-section').after(activateNotificationsButton);
-
-            activateNotificationsButton.addEventListener('click', requestNotificationPermission);
-            // --- FIM NOVO BOTÃO ---
+            // Adicionar listener ao novo botão de notificações
+            const activateNotificationsButton = document.getElementById('activateNotificationsBtn');
+            if (activateNotificationsButton) {
+                activateNotificationsButton.addEventListener('click', requestNotificationPermission);
+            }
 
 
             auth.onAuthStateChanged(async user => {
@@ -460,15 +456,14 @@
                         .orderBy('timestamp', 'desc')
                         .onSnapshot((snapshot) => {
                             console.log("[Dashboard] Snapshot de alertas recebido!");
-                            const alerts = [];
                             
-                            // Use docChanges para identificar apenas os novos documentos e notificar
+                            // Lógica de notificação para NOVOS ALERTA
                             snapshot.docChanges().forEach(change => {
                                 if (change.type === "added") { // Detecta um novo documento
                                     const newAlertData = change.doc.data();
                                     const alertMessage = newAlertData.message;
-                                    const userEmail = newAlertData.userEmail || 'N/A'; // Pega o email do alerta
-                                    const nickname = userEmail.split('@')[0] || 'Desconhecido'; // Extrai nickname do email
+                                    const userEmail = newAlertData.userEmail || 'N/A';
+                                    const nickname = userEmail.split('@')[0] || 'Desconhecido';
 
                                     // Disparar notificação apenas se a aba não estiver em foco e permissão concedida
                                     if (document.hidden && Notification.permission === "granted") {
@@ -487,11 +482,15 @@
                                         }
                                     }
                                 }
-                                // Reconstroi a lista completa de alertas para renderizar (mesmo para 'modified'/'removed')
-                                const data = change.doc.data();
+                            });
+
+                            // Reconstroi a lista COMPLETA de alertas para renderizar
+                            const alertsToRender = [];
+                            snapshot.docs.forEach(doc => { // MODIFICADO AQUI: Usa snapshot.docs para a lista completa
+                                const data = doc.data();
                                 const timestamp = data.timestamp ? data.timestamp.toDate().toISOString() : new Date().toISOString();
-                                alerts.push({
-                                    id: change.doc.id,
+                                alertsToRender.push({
+                                    id: doc.id,
                                     message: data.message,
                                     timestamp: timestamp,
                                     userId: data.userId,
@@ -499,8 +498,6 @@
                                 });
                             });
                             
-                            // Otimização: Apenas renderiza se houver mudanças que afetam a lista final
-                            // (removido o if alerts.length > 0 para sempre limpar e renderizar)
                             captchaAlertsList.innerHTML = '';
                             buildOrderAlertsList.innerHTML = '';
                             attackAlertsList.innerHTML = '';
@@ -510,7 +507,7 @@
                             let hasAttackAlerts = false;
 
                             // Ordena os alertas do mais novo para o mais antigo para a UI
-                            alerts.sort((a, b) => {
+                            alertsToRender.sort((a, b) => {
                                 const dateA = convertTimestampToDate(a.timestamp);
                                 const dateB = convertTimestampToDate(b.timestamp);
                                 if (isNaN(dateA.getTime())) return 1;
@@ -518,7 +515,7 @@
                                 return dateB.getTime() - dateA.getTime();
                             });
 
-                            alerts.forEach(alert => {
+                            alertsToRender.forEach(alert => {
                                 const div = document.createElement('div');
                                 div.className = 'alert-item';
 

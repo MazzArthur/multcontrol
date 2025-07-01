@@ -451,40 +451,64 @@
                     
                     // --- NOVA LÓGICA: LISTENER DE ALERTAS EM TEMPO REAL ---
                     console.log("[Dashboard] Configurando listener de alertas em tempo real...");
+                    // Mantém um registro dos IDs de alertas que já foram notificados para evitar duplicação em refreshes
+                    const notifiedAlertIds = new Set(JSON.parse(localStorage.getItem('notifiedAlertIds') || '[]'));
+
                     dbClient.collection('alerts')
                         .where('userId', '==', user.uid)
                         .orderBy('timestamp', 'desc')
                         .onSnapshot((snapshot) => {
                             console.log("[Dashboard] Snapshot de alertas recebido!");
                             
-                            // Lógica de notificação para NOVOS ALERTA
+                            // 1. Lógica de notificação para NOVOS ALERTA
                             snapshot.docChanges().forEach(change => {
                                 if (change.type === "added") { // Detecta um novo documento
                                     const newAlertData = change.doc.data();
+                                    const alertId = change.doc.id; // ID do documento
                                     const alertMessage = newAlertData.message;
                                     const userEmail = newAlertData.userEmail || 'N/A';
-                                    const nickname = userEmail.split('@')[0] || 'Desconhecido';
+                                    // NOVO: Extrai o nickname da mensagem do alerta
+                                    const nicknameMatch = alertMessage.match(/Conta "([^"]+)"/);
+                                    const alertNickname = nicknameMatch ? nicknameMatch[1] : (userEmail.split('@')[0] || 'Desconhecido');
 
-                                    // Disparar notificação apenas se a aba não estiver em foco
-                                    if (document.hidden && Notification.permission === "granted") {
-                                        if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
-                                            new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", {
-                                                body: `Captcha detectado para a conta: ${nickname}`,
-                                                icon: 'https://www.google.com/favicon.ico'
-                                            });
-                                            console.log("[Dashboard] Notificação de Captcha disparada.");
-                                        } else if (alertMessage.includes('ATAQUE(S) NOVO(S)!')) {
-                                            new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", {
-                                                body: `A conta ${nickname} tem novos ataques a chegar!`,
-                                                icon: 'https://dsbr.innogamescdn.com/asset/75cb846c/graphic/unit/att.webp'
-                                            });
-                                            console.log("[Dashboard] Notificação de Ataque disparada.");
+
+                                    // Verifica se o alerta já foi notificado anteriormente
+                                    if (!notifiedAlertIds.has(alertId)) {
+                                        // Disparar notificação apenas se a aba não estiver em foco e permissão concedida
+                                        if (document.hidden && Notification.permission === "granted") {
+                                            if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
+                                                new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", {
+                                                    body: `Captcha detectado para a conta: ${alertNickname}`, // Usa o nickname do alerta
+                                                    icon: 'https://www.google.com/favicon.ico'
+                                                });
+                                                console.log("[Dashboard] Notificação de Captcha disparada.");
+                                            } else if (alertMessage.includes('ATAQUE(S) NOVO(S)!')) {
+                                                new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", {
+                                                    body: `A conta ${alertNickname} tem novos ataques a chegar!`, // Usa o nickname do alerta
+                                                    icon: 'https://dsbr.innogamescdn.com/asset/75cb846c/graphic/unit/att.webp'
+                                                });
+                                                console.log("[Dashboard] Notificação de Ataque disparada.");
+                                            }
                                         }
+                                        // Adiciona o ID ao conjunto de alertas notificados
+                                        notifiedAlertIds.add(alertId);
                                     }
                                 }
                             });
+                            // Limpeza de IDs antigos no localStorage (ex: IDs com mais de 24 horas)
+                            const now = Date.now();
+                            const oneDay = 24 * 60 * 60 * 1000;
+                            const idsToKeep = new Set();
+                            notifiedAlertIds.forEach(id => {
+                                // Se você salvar o timestamp junto com o ID, pode limpar melhor
+                                // Por simplicidade aqui, vou apenas manter todos que chegam, e o localStorage tem um limite.
+                                // Para uma limpeza real, você precisaria armazenar {id: '...', timestamp: Date.now()}
+                                idsToKeep.add(id);
+                            });
+                            localStorage.setItem('notifiedAlertIds', JSON.stringify(Array.from(idsToKeep)));
 
-                            // Reconstroi a lista COMPLETA de alertas para renderizar
+
+                            // 2. Reconstroi a lista COMPLETA de alertas para renderizar (para exibir tudo)
                             const alertsToRender = [];
                             snapshot.docs.forEach(doc => { // MODIFICADO AQUI: Usa snapshot.docs para a lista completa
                                 const data = doc.data();

@@ -166,7 +166,7 @@ app.get('/api/get-raw-script/:scriptName', (req, res) => {
         return res.status(400).send('Nome de script inválido.');
     }
 
-    const filePath = path.join(__dirname, 'userscripts_content', `${scriptName}_content.js`);
+    const filePath = path.join(__dirname, 'userscripts_content', `${scriptName}_script_content.js`);
 
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {

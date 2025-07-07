@@ -136,7 +136,95 @@ app.get('/personalizar', (req, res) => {
     const firebaseConfig = getFirebaseClientConfig();
     res.render('personalizar', { firebaseConfig: firebaseConfig });
 });
+const requireAuth = async (req, res, next) => {
+    const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
+    if (!idToken) {
+        return res.status(401).json({ error: 'Token de autenticação ausente.' });
+    }
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        req.user = { uid: decodedToken.uid, email: decodedToken.email };
+        next();
+    } catch (error) {
+        console.error('[AUTH ERROR] Token inválido:', error);
+        return res.status(403).json({ error: 'Falha na autenticação.' });
+    }
+};
 
+// GET: Buscar todos os perfis de ordem de um usuário
+app.get('/api/build-orders', requireAuth, async (req, res) => {
+    try {
+        const snapshot = await db.collection('buildOrders')
+            .where('userId', '==', req.user.uid)
+            .orderBy('createdAt', 'desc')
+            .get();
+            
+        const profiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(profiles);
+    } catch (error) {
+        console.error('[SERVER ERROR] Falha ao buscar ordens:', error);
+        res.status(500).json({ error: 'Erro ao buscar ordens de construção.' });
+    }
+});
+
+// POST: Criar um novo perfil de ordem de construção
+app.post('/api/build-orders', requireAuth, async (req, res) => {
+    const { profileName, order } = req.body;
+    if (!profileName || !order) {
+        return res.status(400).json({ error: 'Nome do perfil e ordem são obrigatórios.' });
+    }
+    try {
+        const newProfile = {
+            userId: req.user.uid,
+            profileName,
+            order,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+        const docRef = await db.collection('buildOrders').add(newProfile);
+        res.status(201).json({ id: docRef.id, ...newProfile });
+    } catch (error) {
+        console.error('[SERVER ERROR] Falha ao criar ordem:', error);
+        res.status(500).json({ error: 'Erro ao criar ordem de construção.' });
+    }
+});
+
+// PUT: Atualizar um perfil de ordem existente
+app.put('/api/build-orders/:id', requireAuth, async (req, res) => {
+    const { id } = req.params;
+    const { profileName, order } = req.body;
+    if (!profileName || !order) {
+        return res.status(400).json({ error: 'Nome do perfil e ordem são obrigatórios.' });
+    }
+    try {
+        const docRef = db.collection('buildOrders').doc(id);
+        const doc = await docRef.get();
+        if (!doc.exists || doc.data().userId !== req.user.uid) {
+            return res.status(404).json({ error: 'Perfil não encontrado ou não autorizado.' });
+        }
+        await docRef.update({ profileName, order });
+        res.status(200).json({ message: 'Perfil atualizado com sucesso.' });
+    } catch (error) {
+        console.error('[SERVER ERROR] Falha ao atualizar ordem:', error);
+        res.status(500).json({ error: 'Erro ao atualizar ordem de construção.' });
+    }
+});
+
+// DELETE: Deletar um perfil de ordem
+app.delete('/api/build-orders/:id', requireAuth, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const docRef = db.collection('buildOrders').doc(id);
+        const doc = await docRef.get();
+        if (!doc.exists || doc.data().userId !== req.user.uid) {
+            return res.status(404).json({ error: 'Perfil não encontrado ou não autorizado.' });
+        }
+        await docRef.delete();
+        res.status(200).json({ message: 'Perfil deletado com sucesso.' });
+    } catch (error) {
+        console.error('[SERVER ERROR] Falha ao deletar ordem:', error);
+        res.status(500).json({ error: 'Erro ao deletar ordem de construção.' });
+    }
+});
 // Rota para o userscript obter um Custom Token fresco
 app.post('/api/get_fresh_id_token', async (req, res) => {
     const userscriptApiKey = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;

@@ -26,6 +26,7 @@
         .profile-manager { grid-column: 1 / -1; margin-bottom: 20px; }
         .profile-manager select { width: 100%; padding: 10px; font-size: 1.1em; }
         .btn-import { background-color: #546e7a; color: white; margin-left:10px; }
+        .btn-import:hover { background-color: #455a64; }
         #building-controls-container { display: flex; flex-direction: column; gap: 12px; }
         .building-control-row { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 8px; border-radius: 5px; border: 1px solid #e9ecef; }
         .building-name { font-weight: 500; flex-basis: 50%; }
@@ -93,7 +94,7 @@
         <div id="script-generation-panel" class="panel">
             <h2>Copiar Script de um Perfil Salvo</h2>
             <div id="script-list-container">
-                <p>Nenhum perfil salvo encontrado. Salve um perfil para poder copiar o script.</p>
+                <p>Nenhum perfil salvo encontrado.</p>
             </div>
         </div>
     </div>
@@ -118,6 +119,7 @@
     const db = firebase.firestore();
 
     document.addEventListener('DOMContentLoaded', () => {
+
         const ID_TO_NAME = { 0: 'main', 1: 'barracks', 2: 'stable', 3: 'garage', 4: 'smith', 5: 'place', 6: 'statue', 7: 'market', 8: 'wood', 9: 'stone', 10: 'iron', 11: 'farm', 12: 'storage', 13: 'hide', 14: 'wall', 15: 'snob', 16: 'academy', 18: 'watchtower' };
         const BUILDING_INFO = {
             'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' },
@@ -146,18 +148,144 @@
         const processImportBtn = document.getElementById('process-import-btn');
         const closeImportModalBtn = document.getElementById('close-import-modal-btn');
         
-        async function apiRequest(endpoint, method = 'GET', body = null) { /* ... (sem alterações) ... */ }
-        function populateProfileSelect() { /* ... (sem alterações) ... */ }
-        function loadProfile(profileId) { /* ... (sem alterações) ... */ }
-        async function handleSaveProfile() { /* ... (sem alterações) ... */ }
-        async function handleDeleteProfile() { /* ... (sem alterações) ... */ }
-        function renderScriptList() { /* ... (sem alterações) ... */ }
-        async function generateAndCopyScript(profile, buttonElement) { /* ... (sem alterações) ... */ }
-        const showStatus = (message, isError = false) => { /* ... (sem alterações) ... */ };
-        const renderCustomOrder = () => { /* ... (sem alterações) ... */ };
-        const populateBuildingControls = () => { /* ... (sem alterações) ... */ };
+        async function apiRequest(endpoint, method = 'GET', body = null) {
+            if (!auth.currentUser) throw new Error('Usuário não autenticado.');
+            const idToken = await auth.currentUser.getIdToken();
+            const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
+            if (body) options.body = JSON.stringify(body);
+            const response = await fetch(`/api/${endpoint}`, options);
+            const contentType = response.headers.get("content-type");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Falha na requisição à API.');
+            }
+            if (contentType?.includes("application/json")) return await response.json();
+            return await response.text();
+        }
+
+        function showStatus(message, isError = false) {
+             statusMsg.textContent = message;
+             statusMsg.style.color = isError ? '#e53935' : '#28a745';
+             setTimeout(() => statusMsg.textContent = '', 4000);
+        };
         
-        // FUNÇÃO DE IMPORTAÇÃO CORRIGIDA PARA "EXPANDIR" A ORDEM
+        function populateProfileSelect() {
+            profileSelect.innerHTML = '<option value="new">--- Criar Nova Ordem de Construção ---</option>';
+            allProfiles.forEach(profile => {
+                const option = document.createElement('option');
+                option.value = profile.id;
+                option.textContent = profile.profileName;
+                profileSelect.appendChild(option);
+            });
+            profileSelect.value = currentProfile ? currentProfile.id : 'new';
+        }
+
+        function loadProfile(profileId) {
+            if (profileId === 'new') {
+                currentProfile = null;
+                currentBuildOrder = [];
+                currentProfileNameEl.textContent = "Nova Ordem de Construção";
+                deleteBtn.style.display = 'none';
+            } else {
+                currentProfile = allProfiles.find(p => p.id === profileId);
+                currentBuildOrder = currentProfile ? [...currentProfile.order] : [];
+                currentProfileNameEl.textContent = `Editando: ${currentProfile.profileName}`;
+                deleteBtn.style.display = 'inline-block';
+            }
+            renderCustomOrder();
+        }
+
+        async function handleSaveProfile() {
+            let profileName = currentProfile ? currentProfile.profileName : '';
+            if (!currentProfile) {
+                profileName = prompt("Por favor, dê um nome para esta nova ordem:", profileName || "Minha Estratégia");
+                if (!profileName) return;
+            }
+            const profileData = { profileName, order: currentBuildOrder };
+            try {
+                if (currentProfile) {
+                    await apiRequest(`build-orders/${currentProfile.id}`, 'PUT', profileData);
+                    const index = allProfiles.findIndex(p => p.id === currentProfile.id);
+                    allProfiles[index] = { ...allProfiles[index], ...profileData };
+                } else {
+                    const newProfileData = await apiRequest('build-orders', 'POST', profileData);
+                    allProfiles.unshift(newProfileData);
+                    currentProfile = newProfileData;
+                }
+                populateProfileSelect();
+                renderScriptList();
+                showStatus('Perfil salvo com sucesso!', false);
+            } catch (error) { showStatus(`Erro ao salvar: ${error.message}`, true); }
+        }
+
+        async function handleDeleteProfile() {
+            if (!currentProfile || !confirm(`Deletar o perfil "${currentProfile.profileName}"?`)) return;
+            try {
+                await apiRequest(`build-orders/${currentProfile.id}`, 'DELETE');
+                allProfiles = allProfiles.filter(p => p.id !== currentProfile.id);
+                loadProfile('new');
+                populateProfileSelect();
+                renderScriptList();
+                showStatus('Perfil deletado.', false);
+            } catch(error) { showStatus(`Erro ao deletar: ${error.message}`, true); }
+        }
+
+        function renderScriptList() {
+            scriptListContainer.innerHTML = '';
+            if (allProfiles.length === 0) {
+                scriptListContainer.innerHTML = '<p>Nenhum perfil salvo encontrado.</p>';
+                return;
+            }
+            allProfiles.forEach(profile => {
+                const item = document.createElement('div');
+                item.className = 'script-list-item';
+                item.innerHTML = `<strong>${profile.profileName}</strong><button class="btn btn-save copy-script-btn" data-profile-id="${profile.id}">Copiar Script</button>`;
+                scriptListContainer.appendChild(item);
+            });
+        }
+        
+        async function generateAndCopyScript(profile, buttonElement) {
+            const originalText = buttonElement.textContent;
+            buttonElement.textContent = 'Gerando...';
+            buttonElement.disabled = true;
+            try {
+                const finalScript = await apiRequest('generate-custom-script', 'POST', { order: profile.order });
+                await navigator.clipboard.writeText(finalScript);
+                showStatus(`Script para "${profile.profileName}" copiado com sucesso!`);
+            } catch (error) {
+                showStatus(`Erro ao gerar script: ${error.message}`, true);
+            } finally {
+                buttonElement.textContent = originalText;
+                buttonElement.disabled = false;
+            }
+        }
+        
+        const renderCustomOrder = () => {
+            customList.innerHTML = '';
+            if (currentBuildOrder.length === 0) {
+                customList.innerHTML = '<p>Ordem de construção vazia.</p>';
+                return;
+            }
+            currentBuildOrder.forEach((item, index) => {
+                const info = BUILDING_INFO[item.building] || { name: item.building, icon: '❓' };
+                const el = document.createElement('div');
+                el.className = 'order-item';
+                el.innerHTML = `<span>${index + 1}. ${info.icon} <strong>${info.name}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`;
+                customList.appendChild(el);
+            });
+        };
+
+        const populateBuildingControls = () => {
+            controlsContainer.innerHTML = '';
+            Object.keys(BUILDING_INFO).forEach(buildingKey => {
+                const info = BUILDING_INFO[buildingKey];
+                const controlRow = document.createElement('div');
+                controlRow.className = 'building-control-row';
+                controlRow.innerHTML = `<span class="building-name">${info.icon} ${info.name}</span><div class="building-inputs"><input type="number" value="1" min="1" max="30" class="quantity-input" data-building="${buildingKey}"><button class="btn btn-add" data-building="${buildingKey}">Adicionar</button></div>`;
+                controlsContainer.appendChild(controlRow);
+            });
+        };
+        
         function parseGameExportCode(code) {
             try {
                 const decodedString = atob(code.trim());
@@ -166,7 +294,6 @@
                     const buildingId = decodedString.charCodeAt(i);
                     const targetLevel = decodedString.charCodeAt(i + 1);
                     const buildingName = ID_TO_NAME[buildingId];
-
                     if (buildingName && targetLevel > 0) {
                         let lastKnownLevel = 0;
                         for (let j = finalExpandedOrder.length - 1; j >= 0; j--) {
@@ -187,26 +314,28 @@
                 throw new Error("O código fornecido é inválido ou está em um formato irreconhecível.");
             }
         }
-
-        async function initialize() {
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    populateBuildingControls();
-                    try {
-                        allProfiles = await apiRequest('build-orders');
-                        populateProfileSelect();
-                        renderScriptList();
-                        loadProfile('new');
-                    } catch (error) {
-                        showStatus(`Não foi possível carregar seus perfis: ${error.message}`, true);
-                    }
-                } else {
-                    document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
-                }
-            });
+        
+        async function initializeApp(user) {
+            populateBuildingControls();
+            try {
+                allProfiles = await apiRequest('build-orders');
+                populateProfileSelect();
+                renderScriptList();
+                loadProfile('new');
+            } catch (error) {
+                showStatus(`Não foi possível carregar seus perfis: ${error.message}`, true);
+            }
         }
 
         // --- EVENT LISTENERS ---
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                initializeApp(user);
+            } else {
+                document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
+            }
+        });
+
         profileSelect.addEventListener('change', (e) => loadProfile(e.target.value));
         saveBtn.addEventListener('click', handleSaveProfile);
         deleteBtn.addEventListener('click', handleDeleteProfile);
@@ -277,8 +406,6 @@
                 showStatus('Ordem importada com sucesso! Clique em "Salvar Ordem" para criar um novo perfil.');
             } catch (error) { alert(`Erro na importação: ${error.message}`); }
         });
-        
-        initialize();
     });
 </script>
 

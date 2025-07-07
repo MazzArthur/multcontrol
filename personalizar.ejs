@@ -7,6 +7,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
     <style>
         body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; }
         .navbar { background-color: #2c3e50; width: 100%; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
@@ -22,6 +27,7 @@
         .profile-manager .control-group { display:flex; flex-direction:column; }
         .profile-manager label { margin-bottom: 5px; font-weight: 500; }
         .profile-manager select { width: 100%; padding: 10px; font-size: 1.1em; }
+        #building-controls-container { display: flex; flex-direction: column; gap: 12px; }
         .building-control-row { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 8px; border-radius: 5px; border: 1px solid #e9ecef; }
         .building-name { font-weight: 500; flex-basis: 50%; }
         .building-inputs { display: flex; align-items: center; gap: 8px; }
@@ -94,7 +100,13 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
+    // Inicializa o Firebase com a configuração passada pelo servidor
+    const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    document.addEventListener('DOMContentLoaded', () => {
         // --- CONFIGURAÇÕES E ESTADO ---
         const BUILDING_INFO = {
             'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' },
@@ -218,11 +230,38 @@
              statusMsg.style.color = isError ? '#e53935' : '#28a745';
              setTimeout(() => statusMsg.textContent = '', 4000);
         };
-        const renderCustomOrder = () => { /* ... (mesma função da versão anterior) ... */ };
-        const populateBuildingControls = () => { /* ... (mesma função da versão anterior) ... */ };
+        const renderCustomOrder = () => {
+            customList.innerHTML = '';
+            if (currentBuildOrder.length === 0) {
+                customList.innerHTML = '<p>Sua ordem de construção está vazia.</p>';
+                return;
+            }
+            currentBuildOrder.forEach((item, index) => {
+                const info = BUILDING_INFO[item.building] || { name: item.building, icon: '❓' };
+                const el = document.createElement('div');
+                el.className = 'order-item';
+                el.innerHTML = `<span>${index + 1}. ${info.icon} <strong>${info.name}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`;
+                customList.appendChild(el);
+            });
+        };
+        const populateBuildingControls = () => {
+            controlsContainer.innerHTML = '';
+            Object.keys(BUILDING_INFO).forEach(buildingKey => {
+                const info = BUILDING_INFO[buildingKey];
+                const controlRow = document.createElement('div');
+                controlRow.className = 'building-control-row';
+                controlRow.innerHTML = `
+                    <span class="building-name">${info.icon} ${info.name}</span>
+                    <div class="building-inputs">
+                        <input type="number" value="1" min="1" max="30" class="quantity-input" data-building="${buildingKey}">
+                        <button class="btn btn-add" data-building="${buildingKey}">Adicionar</button>
+                    </div>
+                `;
+                controlsContainer.appendChild(controlRow);
+            });
+        };
         
         async function initialize() {
-            const auth = firebase.auth();
             auth.onAuthStateChanged(async (user) => {
                 if (user) {
                     populateBuildingControls();
@@ -234,8 +273,7 @@
                         showStatus(`Não foi possível carregar seus perfis: ${error.message}`, true);
                     }
                 } else {
-                    // Opcional: redirecionar para o login se não estiver autenticado
-                    // window.location.href = '/';
+                    scriptOutputArea.innerHTML = '<p>Você precisa estar logado para gerenciar seus perfis.</p>'
                 }
             });
         }
@@ -249,11 +287,33 @@
              if (e.target.classList.contains('btn-add')) {
                 const building = e.target.dataset.building;
                 const input = controlsContainer.querySelector(`.quantity-input[data-building="${building}"]`);
-                // ... (lógica de adicionar passos continua a mesma)
+                const quantity = parseInt(input.value, 10);
+                if (isNaN(quantity) || quantity < 1) { alert('Quantidade inválida.'); return; }
+                let lastLevel = 0;
+                for (let i = currentBuildOrder.length - 1; i >= 0; i--) {
+                    if (currentBuildOrder[i].building === building) {
+                        lastLevel = currentBuildOrder[i].level;
+                        break;
+                    }
+                }
+                for (let i = 1; i <= quantity; i++) {
+                    const newLevel = lastLevel + i;
+                    if (newLevel > 30) {
+                        showStatus(`Limite de nível 30 atingido para "${BUILDING_INFO[building].name}"`, true);
+                        break;
+                    }
+                    currentBuildOrder.push({ building, level: newLevel });
+                }
+                renderCustomOrder();
              }
         });
         
-        customList.addEventListener('click', (e) => { /* ... (lógica de deletar passo continua a mesma) ... */ });
+        customList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                currentBuildOrder.splice(parseInt(e.target.dataset.index, 10), 1);
+                renderCustomOrder();
+            }
+        });
 
         generateBtn.addEventListener('click', async () => {
             if (!currentProfile) {
@@ -268,6 +328,7 @@
                 const newOrderString = currentBuildOrder.map(item => `        "main_buildlink_${item.building}_${item.level}"`).join(',\n');
                 const newFunctionString = `function getConstrucao_Edifcios_Serie() {\n    const Sequencia_Construcao = [\n${newOrderString}\n    ];\n\n    return Sequencia_Construcao;\n}`;
                 const regex = /function\s+getConstrucao_Edifcios_Serie\s*\(\)\s*\{[\s\S]*?\}/i;
+                if (!regex.test(baseScript)) throw new Error("Não foi possível encontrar a função 'getConstrucao_Edifcios_Serie()' no script.");
                 const finalScript = baseScript.replace(regex, newFunctionString);
                 finalScriptOutput.value = finalScript;
                 
@@ -282,7 +343,11 @@
             }
         });
 
-        copyBtn.addEventListener('click', () => { /* ... (lógica de copiar continua a mesma) ... */ });
+        copyBtn.addEventListener('click', () => {
+            finalScriptOutput.select();
+            document.execCommand('copy');
+            showStatus('Script copiado para a área de transferência!');
+        });
         
         initialize();
     });

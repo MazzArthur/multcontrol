@@ -1,576 +1,253 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personalizar Script - MULTCONTROL</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f7f6;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .navbar {
-            background-color: #2c3e50;
-            width: 100%;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        .navbar-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: flex-start;
-        }
-        .navbar a {
-            float: left;
-            color: white;
-            text-align: center;
-            padding: 14px 20px;
-            text-decoration: none;
-            font-size: 17px;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-        .navbar a:hover {
-            background-color: #3498db;
-        }
-        .navbar a.active {
-            background-color: #2980b9;
-        }
-        .main-container {
-            padding: 20px;
-            width: 100%;
-            max-width: 1100px;
-            box-sizing: border-box;
-        }
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 30px;
-        }
-        .panel {
-            background-color: #fff;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-        h1,
-        h2 {
-            color: #2c3e50;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-top: 0;
-        }
-        .profile-manager {
-            grid-column: 1 / -1;
-            margin-bottom: 20px;
-        }
-        .profile-manager select {
-            width: 100%;
-            padding: 10px;
-            font-size: 1.1em;
-        }
-        .btn {
-            border: none;
-            border-radius: 5px;
-            padding: 8px 15px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-        .btn-import {
-            background-color: #546e7a;
-            color: white;
-            margin-left: 10px;
-        }
-        .btn-info {
-            background-color: #17a2b8;
-            color: white;
-        }
-        #building-controls-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .building-control-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background-color: #f8f9fa;
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #e9ecef;
-        }
-        .building-name {
-            font-weight: 500;
-            flex-basis: 50%;
-        }
-        .building-inputs {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .building-inputs input {
-            width: 50px;
-            text-align: center;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-        .btn-add {
-            background-color: #3498db;
-            color: white;
-        }
-        #custom-order-list {
-            min-height: 200px;
-            max-height: 500px;
-            overflow-y: auto;
-            border: 1px dashed #ccc;
-            border-radius: 5px;
-            padding: 10px;
-            background-color: #fafafa;
-        }
-        .order-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #e3f2fd;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        .delete-btn {
-            background: #e57373;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            cursor: pointer;
-            font-weight: bold;
-            line-height: 22px;
-            text-align: center;
-        }
-        .action-buttons {
-            margin-top: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .btn-save {
-            background-color: #28a745;
-            color: white;
-        }
-        .btn-clear {
-            background-color: #e53935;
-            color: white;
-        }
-        #script-generation-panel {
-            grid-column: 1 / -1;
-            margin-top: 20px;
-        }
-        #status-message {
-            margin-top: 15px;
-            color: #218838;
-            font-weight: bold;
-            text-align: center;
-            height: 20px;
-        }
-        #script-list-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .script-list-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background-color: #f8f9fa;
-            padding: 10px 15px;
-            border-radius: 5px;
-            border: 1px solid #e9ecef;
-        }
-        .script-list-item strong {
-            font-size: 1.1em;
-            color: #333;
-        }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-        .modal-content h2 {
-            margin-top: 0;
-        }
-        .modal-content textarea {
-            width: 100%;
-            height: 200px;
-            box-sizing: border-box;
-            font-family: 'Consolas', monospace;
-            font-size: 0.9em;
-            margin-top: 10px;
-            background-color: #f4f4f4;
-            color: #333;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .modal-actions {
-            margin-top: 20px;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; }
+        .navbar { background-color: #2c3e50; width: 100%; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .navbar-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: flex-start; }
+        .navbar a { float: left; color: white; text-align: center; padding: 14px 20px; text-decoration: none; font-size: 17px; font-weight: bold; transition: background-color 0.3s; }
+        .navbar a:hover { background-color: #3498db; }
+        .navbar a.active { background-color: #2980b9; }
+        .main-container { padding: 20px; width: 100%; max-width: 1100px; box-sizing: border-box; }
+        .grid-container { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
+        .panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        .profile-manager { grid-column: 1 / -1; margin-bottom: 20px; }
+        .profile-manager select { width: 100%; padding: 10px; font-size: 1.1em; }
+        .btn { border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: background-color 0.3s; }
+        .btn-import { background-color: #546e7a; color: white; margin-left:10px; }
+        .btn-info { background-color: #17a2b8; color: white; }
+        #building-controls-container { display: flex; flex-direction: column; gap: 12px; }
+        .building-control-row { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 8px; border-radius: 5px; border: 1px solid #e9ecef; }
+        .building-name { font-weight: 500; flex-basis: 50%; }
+        .building-inputs { display: flex; align-items: center; gap: 8px; }
+        .building-inputs input { width: 50px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+        .btn-add { background-color: #3498db; color: white; }
+        #custom-order-list { min-height: 200px; max-height: 500px; overflow-y: auto; border: 1px dashed #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; }
+        .order-item { display: flex; justify-content: space-between; align-items: center; background-color: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 5px; font-weight: 500; }
+        .delete-btn { background: #e57373; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 22px; text-align: center; }
+        .action-buttons { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .btn-save { background-color: #28a745; color: white; }
+        .btn-clear { background-color: #e53935; color: white; }
+        #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
+        #status-message { margin-top: 15px; color: #218838; font-weight: bold; text-align: center; height: 20px; }
+        #script-list-container { display: flex; flex-direction: column; gap: 12px; }
+        .script-list-item { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 10px 15px; border-radius: 5px; border: 1px solid #e9ecef; }
+        .script-list-item strong { font-size: 1.1em; color: #333; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-content h2 { margin-top: 0; }
+        .modal-content textarea { width: 100%; height: 200px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 0.9em; margin-top: 10px; background-color: #f4f4f4; color: #333; padding: 10px; border-radius: 5px; }
+        .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-container">
-            <a href="/dashboard.html">Dashboard</a>
-            <a href="/personalizar" class="active">Personalizar Scripts</a>
-        </div>
-    </nav>
 
-    <div class="main-container">
-        <h1>Gerenciador de Estratégias de Construção</h1>
+<nav class="navbar">
+    <div class="navbar-container">
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/personalizar" class="active">Personalizar Scripts</a>
+    </div>
+</nav>
 
-        <div class="panel profile-manager">
-            <h2>Meus Perfis de Construção</h2>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <select id="profile-select" style="flex-grow: 1;">
-                    <option value="new">--- Criar Nova Ordem de Construção ---</option>
-                </select>
-                <button id="import-btn" class="btn btn-import">Importar Perfil (JSON)</button>
-                <button id="import-upador-btn" class="btn btn-import" style="margin-left: 10px;">Importar do Jogo (Código Upador)</button>
-            </div>
-        </div>
-
-        <div class="grid-container">
-            <div class="panel add-panel">
-                <h2>Editor de Passos</h2>
-                <div id="building-controls-container"><p>Aguardando autenticação...</p></div>
-            </div>
-
-            <div class="panel custom-order">
-                <h2 id="current-profile-name">Nova Ordem de Construção</h2>
-                <div id="custom-order-list">
-                    <p>Selecione um perfil para carregar ou adicione passos para uma nova ordem.</p>
-                </div>
-                <div class="action-buttons">
-                    <button id="save-order-btn" class="btn btn-save">Salvar Ordem Atual</button>
-                    <button id="export-order-btn" class="btn btn-info" style="display: none;">Exportar Perfil</button>
-                    <button id="delete-order-btn" class="btn btn-clear" style="display: none;">Deletar Perfil</button>
-                </div>
-                <div id="status-message"></div>
-            </div>
-
-            <div id="script-generation-panel" class="panel">
-                <h2>Copiar Script de um Perfil Salvo</h2>
-                <div id="script-list-container">
-                    <p>Nenhum perfil salvo encontrado.</p>
-                </div>
-            </div>
+<div class="main-container">
+    <h1>Gerenciador de Estratégias de Construção</h1>
+    
+    <div class="panel profile-manager">
+        <h2>Meus Perfis de Construção</h2>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="profile-select" style="flex-grow: 1;">
+                <option value="new">--- Criar Nova Ordem de Construção ---</option>
+            </select>
+            <button id="import-btn" class="btn btn-import">Importar Perfil (JSON)</button>
         </div>
     </div>
 
-    <div id="import-export-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2 id="modal-title"></h2>
-            <p id="modal-description"></p>
-            <textarea id="modal-textarea"></textarea>
-            <div class="modal-actions">
-                <button id="modal-action-btn" class="btn btn-save"></button>
-                <button id="modal-close-btn" class="btn btn-clear">Fechar</button>
+    <div class="grid-container">
+        <div class="panel add-panel">
+            <h2>Editor de Passos</h2>
+            <div id="building-controls-container"><p>Aguardando autenticação...</p></div>
+        </div>
+
+        <div class="panel custom-order">
+            <h2 id="current-profile-name">Nova Ordem de Construção</h2>
+            <div id="custom-order-list"><p>Selecione um perfil para carregar ou adicione passos para uma nova ordem.</p></div>
+            <div class="action-buttons">
+                <button id="save-order-btn" class="btn btn-save">Salvar Ordem Atual</button>
+                <button id="export-order-btn" class="btn btn-info" style="display: none;">Exportar Perfil</button>
+                <button id="delete-order-btn" class="btn btn-clear" style="display: none;">Deletar Perfil</button>
+            </div>
+            <div id="status-message"></div>
+        </div>
+
+        <div id="script-generation-panel" class="panel">
+            <h2>Copiar Script de um Perfil Salvo</h2>
+            <div id="script-list-container">
+                <p>Nenhum perfil salvo encontrado.</p>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+<div id="import-export-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2 id="modal-title"></h2>
+        <p id="modal-description"></p>
+        <textarea id="modal-textarea"></textarea>
+        <div class="modal-actions">
+            <button id="modal-action-btn" class="btn btn-save"></button>
+            <button id="modal-close-btn" class="btn btn-clear">Fechar</button>
+        </div>
+    </div>
+</div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const BUILDING_INFO = {
-                main: { name: 'Edifício Principal', icon: '🏛️' },
-                barracks: { name: 'Quartel', icon: '⚔️' },
-                stable: { name: 'Estábulo', icon: '🐎' },
-                garage: { name: 'Oficina', icon: '⚙️' },
-                smith: { name: 'Ferreiro', icon: '🛠️' },
-                place: { name: 'Praça de Reunião', icon: '🚩' },
-                statue: { name: 'Estátua', icon: '🗿' },
-                market: { name: 'Mercado', icon: '💰' },
-                wood: { name: 'Bosque', icon: '🌳' },
-                stone: { name: 'Poço de Argila', icon: '🧱' },
-                iron: { name: 'Mina de Ferro', icon: '⛏️' },
-                farm: { name: 'Fazenda', icon: '🌾' },
-                storage: { name: 'Armazém', icon: '📦' },
-                hide: { name: 'Esconderijo', icon: '🤫' },
-                wall: { name: 'Muralha', icon: '🛡️' },
-                snob: { name: 'Academia de Nobres', icon: '👑' },
-                academy: { name: 'Academia', icon: '🎓' },
-                watchtower: { name: 'Torre de Vigia', icon: '🔭' },
-                hospital: { name: 'Hospital', icon: '🏥' },
-                church: { name: 'Igreja', icon: '⛪' },
-                trade: { name: 'Posto de Trocas', icon: '🤝' }
-            };
-            let allProfiles = [];
-            let currentProfile = null;
-            let currentBuildOrder = [];
+<script>
+    const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-            const profileSelect = document.getElementById('profile-select');
-            const controlsContainer = document.getElementById('building-controls-container');
-            const customList = document.getElementById('custom-order-list');
-            const currentProfileNameEl = document.getElementById('current-profile-name');
-            const saveBtn = document.getElementById('save-order-btn');
-            const deleteBtn = document.getElementById('delete-order-btn');
-            const scriptListContainer = document.getElementById('script-list-container');
-            const statusMsg = document.getElementById('status-message');
-            const importBtn = document.getElementById('import-btn');
-            const exportBtn = document.getElementById('export-order-btn');
-            const modal = document.getElementById('import-export-modal');
-            const modalTitle = document.getElementById('modal-title');
-            const modalDescription = document.getElementById('modal-description');
-            const modalTextarea = document.getElementById('modal-textarea');
-            const modalActionBtn = document.getElementById('modal-action-btn');
-            const modalCloseBtn = document.getElementById('modal-close-btn');
-            const importUpadorBtn = document.getElementById('import-upador-btn');
+    document.addEventListener('DOMContentLoaded', () => {
+        const BUILDING_INFO = {
+            'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' },
+            'garage': { name: 'Oficina', icon: '⚙️' }, 'smith': { name: 'Ferreiro', icon: '🛠️' }, 'place': { name: 'Praça de Reunião', icon: '🚩' },
+            'statue': { name: 'Estátua', icon: '🗿' }, 'market': { name: 'Mercado', icon: '💰' }, 'wood': { name: 'Bosque', icon: '🌳' },
+            'stone': { name: 'Poço de Argila', icon: '🧱' }, 'iron': { name: 'Mina de Ferro', icon: '⛏️' }, 'farm': { name: 'Fazenda', icon: '🌾' },
+            'storage': { name: 'Armazém', icon: '📦' }, 'hide': { name: 'Esconderijo', icon: '🤫' }, 'wall': { name: 'Muralha', icon: '🛡️' },
+            'snob': { name: 'Academia de Nobres', icon: '👑' }, 'academy': { name: 'Academia', icon: '🎓' }, 'watchtower': { name: 'Torre de Vigia', icon: '🔭' },
+            'hospital': { name: 'Hospital', icon: '🏥' }, 'church': { name: 'Igreja', icon: '⛪' }, 'trade': { name: 'Posto de Trocas', icon: '🤝' }
+        };
+        let allProfiles = [];
+        let currentProfile = null;
+        let currentBuildOrder = [];
 
-            async function apiRequest(endpoint, method = 'GET', body = null) {
-                // Implementação omitida para foco
+        const profileSelect = document.getElementById('profile-select');
+        const controlsContainer = document.getElementById('building-controls-container');
+        const customList = document.getElementById('custom-order-list');
+        const currentProfileNameEl = document.getElementById('current-profile-name');
+        const saveBtn = document.getElementById('save-order-btn');
+        const deleteBtn = document.getElementById('delete-order-btn');
+        const scriptListContainer = document.getElementById('script-list-container');
+        const statusMsg = document.getElementById('status-message');
+        const importBtn = document.getElementById('import-btn');
+        const exportBtn = document.getElementById('export-order-btn');
+        const modal = document.getElementById('import-export-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDescription = document.getElementById('modal-description');
+        const modalTextarea = document.getElementById('modal-textarea');
+        const modalActionBtn = document.getElementById('modal-action-btn');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        
+        async function apiRequest(endpoint, method = 'GET', body = null) { /* ... (sem alterações) ... */ }
+        function populateProfileSelect() { /* ... (sem alterações) ... */ }
+        
+        function loadProfile(profileId) {
+            if (profileId === 'new') {
+                currentProfile = null;
+                currentBuildOrder = [];
+                currentProfileNameEl.textContent = "Nova Ordem de Construção";
+                deleteBtn.style.display = 'none';
+                exportBtn.style.display = 'none';
+            } else {
+                currentProfile = allProfiles.find(p => p.id === profileId);
+                currentBuildOrder = currentProfile ? [...currentProfile.order] : [];
+                currentProfileNameEl.textContent = Editando: ${currentProfile.profileName};
+                deleteBtn.style.display = 'inline-block';
+                exportBtn.style.display = 'inline-block';
             }
+            renderCustomOrder();
+        }
 
-            function populateProfileSelect() {
-                // Implementação omitida para foco
+        async function handleSaveProfile() { /* ... (sem alterações) ... */ }
+        async function handleDeleteProfile() { /* ... (sem alterações) ... */ }
+        function renderScriptList() { /* ... (sem alterações) ... */ }
+        async function generateAndCopyScript(profile, buttonElement) { /* ... (sem alterações) ... */ }
+        const showStatus = (message, isError = false) => { /* ... (sem alterações) ... */ };
+        const renderCustomOrder = () => { /* ... (sem alterações) ... */ };
+        const populateBuildingControls = () => { /* ... (sem alterações) ... */ };
+        
+        async function initializeApp(user) {
+            populateBuildingControls();
+            try {
+                allProfiles = await apiRequest('build-orders');
+                populateProfileSelect();
+                renderScriptList();
+                loadProfile('new');
+            } catch (error) {
+                showStatus(Não foi possível carregar seus perfis: ${error.message}, true);
             }
+        }
 
-            function loadProfile(profileId) {
-                if (profileId === 'new') {
-                    currentProfile = null;
-                    currentBuildOrder = [];
-                    currentProfileNameEl.textContent = "Nova Ordem de Construção";
-                    deleteBtn.style.display = 'none';
-                    exportBtn.style.display = 'none';
-                } else {
-                    currentProfile = allProfiles.find(p => p.id === profileId);
-                    currentBuildOrder = currentProfile ? [...currentProfile.order] : [];
-                    currentProfileNameEl.textContent = `Editando: ${currentProfile.profileName}`;
-                    deleteBtn.style.display = 'inline-block';
-                    exportBtn.style.display = 'inline-block';
-                }
-                renderCustomOrder();
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                initializeApp(user);
+            } else {
+                document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
             }
-
-            async function handleSaveProfile() {
-                // Implementação omitida para foco
-            }
-            async function handleDeleteProfile() {
-                // Implementação omitida para foco
-            }
-            function renderScriptList() {
-                // Implementação omitida para foco
-            }
-            async function generateAndCopyScript(profile, buttonElement) {
-                // Implementação omitida para foco
-            }
-            const showStatus = (message, isError = false) => {
-                statusMsg.textContent = message;
-                statusMsg.style.color = isError ? '#dc3545' : '#218838';
-            };
-            const renderCustomOrder = () => {
-                // Implementação omitida para foco
-            };
-            const populateBuildingControls = () => {
-                // Implementação omitida para foco
-            };
-
-            // Função nova para decodificar o código Upador
-            function decodeUpadorSemiAutomatico(base64) {
-                const binaryString = atob(base64);
-                const steps = [];
-                let index = 0;
-                const buildingMap = {
-                    1: 'main',
-                    2: 'barracks',
-                    3: 'stable',
-                    4: 'garage',
-                    5: 'smith',
-                    6: 'place',
-                    7: 'statue',
-                    8: 'market',
-                    9: 'wood',
-                    10: 'stone',
-                    11: 'iron',
-                    12: 'farm',
-                    13: 'storage',
-                    14: 'hide',
-                    15: 'wall',
-                    16: 'snob',
-                    17: 'academy',
-                    18: 'watchtower',
-                    19: 'hospital',
-                    20: 'church',
-                    21: 'trade'
-                };
-
-                while (index < binaryString.length) {
-                    const buildingCode = binaryString.charCodeAt(index++);
-                    if (buildingCode === 0) break;
-                    const levelIncrease = binaryString.charCodeAt(index++);
-                    const building = buildingMap[buildingCode];
-                    if (!building) {
-                        console.warn(`Código desconhecido: ${buildingCode}`);
-                        continue;
-                    }
-                    steps.push({ building, level: levelIncrease });
-                }
-                return steps;
-            }
-
-            async function initializeApp(user) {
-                populateBuildingControls();
-                try {
-                    allProfiles = await apiRequest('build-orders');
-                    populateProfileSelect();
-                    renderScriptList();
-                    loadProfile('new');
-                } catch (error) {
-                    showStatus(`Não foi possível carregar seus perfis: ${error.message}`, true);
-                }
-            }
-
-            auth.onAuthStateChanged(async user => {
-                if (user) {
-                    initializeApp(user);
-                } else {
-                    document.body.innerHTML =
-                        '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
-                }
-            });
-
-            // --- EVENT LISTENERS ---
-            profileSelect.addEventListener('change', e => loadProfile(e.target.value));
-            saveBtn.addEventListener('click', handleSaveProfile);
-            deleteBtn.addEventListener('click', handleDeleteProfile);
-            controlsContainer.addEventListener('click', e => {
-                // lógica de adicionar passo
-            });
-            customList.addEventListener('click', e => {
-                // lógica de deletar passo
-            });
-            scriptListContainer.addEventListener('click', async e => {
-                // lógica de copiar script
-            });
-
-            modalCloseBtn.addEventListener('click', () => (modal.style.display = 'none'));
-
-            exportBtn.addEventListener('click', () => {
-                if (!currentProfile) return;
-                modalTitle.textContent = 'Exportar Perfil';
-                modalDescription.textContent = 'Copie o código JSON abaixo para salvar um backup ou compartilhar.';
-                modalTextarea.readOnly = true;
-                modalTextarea.value = JSON.stringify(currentBuildOrder, null, 2);
-                modalActionBtn.textContent = 'Copiar Código';
-                modalActionBtn.onclick = () => {
-                    modalTextarea.select();
-                    document.execCommand('copy');
-                    showStatus('Código copiado para a área de transferência!');
-                };
-                modal.style.display = 'flex';
-            });
-
-            importBtn.addEventListener('click', () => {
-                modalTitle.textContent = 'Importar Perfil via JSON';
-                modalDescription.textContent = 'Cole o código JSON de uma ordem de construção exportada.';
-                modalTextarea.readOnly = false;
-                modalTextarea.value = '';
-                modalActionBtn.textContent = 'Importar';
-                modalActionBtn.onclick = () => {
-                    try {
-                        const importedData = JSON.parse(modalTextarea.value);
-                        if (
-                            !Array.isArray(importedData) ||
-                            (importedData.length > 0 &&
-                                (!importedData[0].hasOwnProperty('building') || !importedData[0].hasOwnProperty('level')))
-                        ) {
-                            throw new Error('Formato do JSON é inválido.');
-                        }
-                        loadProfile('new'); // Reseta para uma nova ordem
-                        currentBuildOrder = importedData;
-                        renderCustomOrder();
-                        currentProfileNameEl.textContent = 'Nova Ordem (Importada)';
-                        showStatus('Perfil importado com sucesso! Clique em "Salvar Ordem" para criar um novo perfil.');
-                        modal.style.display = 'none';
-                    } catch (e) {
-                        alert('Erro: O código JSON fornecido é inválido ou está mal formatado.');
-                    }
-                };
-                modal.style.display = 'flex';
-            });
-
-            importUpadorBtn.addEventListener('click', () => {
-                modalTitle.textContent = 'Importar Perfil do Código Upador';
-                modalDescription.textContent = 'Cole o código base64 gerado pelo Upador Semi-Automático do jogo.';
-                modalTextarea.readOnly = false;
-                modalTextarea.value = '';
-                modalActionBtn.textContent = 'Importar';
-                modalActionBtn.onclick = () => {
-                    try {
-                        const code = modalTextarea.value.trim();
-                        if (!code) {
-                            alert('Por favor, cole o código Upador antes de importar.');
-                            return;
-                        }
-                        const importedData = decodeUpadorSemiAutomatico(code);
-                        if (importedData.length === 0) {
-                            alert('Código inválido ou não contém passos de construção.');
-                            return;
-                        }
-                        currentBuildOrder = importedData;
-                        loadProfile('new'); // resetar para novo perfil
-                        renderCustomOrder();
-                        currentProfileNameEl.textContent = 'Nova Ordem (Importada do Código Upador)';
-                        showStatus('Importação feita com sucesso! Salve o perfil para armazenar.');
-                        modal.style.display = 'none';
-                    } catch (e) {
-                        alert('Erro na importação: ' + e.message);
-                    }
-                };
-                modal.style.display = 'flex';
-            });
         });
-    </script>
+
+        // --- EVENT LISTENERS ---
+        profileSelect.addEventListener('change', (e) => loadProfile(e.target.value));
+        saveBtn.addEventListener('click', handleSaveProfile);
+        deleteBtn.addEventListener('click', handleDeleteProfile);
+        controlsContainer.addEventListener('click', (e) => { /* ... (lógica de adicionar passo) ... */ });
+        customList.addEventListener('click', (e) => { /* ... (lógica de deletar passo) ... */ });
+        scriptListContainer.addEventListener('click', async (e) => { /* ... (lógica de copiar script) ... */ });
+
+        modalCloseBtn.addEventListener('click', () => modal.style.display = 'none');
+
+        exportBtn.addEventListener('click', () => {
+            if (!currentProfile) return;
+            modalTitle.textContent = 'Exportar Perfil';
+            modalDescription.textContent = 'Copie o código JSON abaixo para salvar um backup ou compartilhar.';
+            modalTextarea.readOnly = true;
+            modalTextarea.value = JSON.stringify(currentBuildOrder, null, 2);
+            modalActionBtn.textContent = 'Copiar Código';
+            modalActionBtn.onclick = () => {
+                modalTextarea.select();
+                document.execCommand('copy');
+                showStatus('Código copiado para a área de transferência!');
+            };
+            modal.style.display = 'flex';
+        });
+
+        importBtn.addEventListener('click', () => {
+            modalTitle.textContent = 'Importar Perfil via JSON';
+            modalDescription.textContent = 'Cole o código JSON de uma ordem de construção exportada.';
+            modalTextarea.readOnly = false;
+            modalTextarea.value = '';
+            modalActionBtn.textContent = 'Importar';
+            modalActionBtn.onclick = () => {
+                try {
+                    const importedData = JSON.parse(modalTextarea.value);
+                    if (!Array.isArray(importedData) || (importedData.length > 0 && (!importedData[0].hasOwnProperty('building') || !importedData[0].hasOwnProperty('level')))) {
+                        throw new Error('Formato do JSON é inválido.');
+                    }
+                    loadProfile('new'); // Reseta para uma nova ordem
+                    currentBuildOrder = importedData;
+                    renderCustomOrder();
+                    currentProfileNameEl.textContent = 'Nova Ordem (Importada)';
+                    showStatus('Perfil importado com sucesso! Clique em "Salvar Ordem" para criar um novo perfil.');
+                    modal.style.display = 'none';
+                } catch (e) {
+                    alert('Erro: O código JSON fornecido é inválido ou está mal formatado.');
+                }
+            };
+            modal.style.display = 'flex';
+        });
+    });
+</script>
+
 </body>
 </html>

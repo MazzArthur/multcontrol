@@ -291,34 +291,40 @@
         function parseGameExportCode(code) {
             try {
                 const decodedString = atob(code.trim());
-                const buildOrder = [];
+                const finalExpandedOrder = [];
+
                 for (let i = 0; i < decodedString.length; i += 2) {
                     const buildingId = decodedString.charCodeAt(i);
-                    const level = decodedString.charCodeAt(i + 1);
+                    const targetLevel = decodedString.charCodeAt(i + 1);
                     const buildingName = ID_TO_NAME[buildingId];
-                    if (buildingName && level > 0) {
-                        buildOrder.push({ building: buildingName, level: level });
+
+                    if (buildingName && targetLevel > 0) {
+                        // Encontra qual o último nível deste edifício na lista que já montamos
+                        let lastKnownLevel = 0;
+                        for (let j = finalExpandedOrder.length - 1; j >= 0; j--) {
+                            if (finalExpandedOrder[j].building === buildingName) {
+                                lastKnownLevel = finalExpandedOrder[j].level;
+                                break;
+                            }
+                        }
+
+                        // Adiciona os níveis um por um, do último conhecido + 1 até o nível alvo
+                        for (let l = lastKnownLevel + 1; l <= targetLevel; l++) {
+                            finalExpandedOrder.push({ building: buildingName, level: l });
+                        }
                     }
                 }
-                return buildOrder;
+                
+                if (finalExpandedOrder.length === 0) {
+                     throw new Error("Nenhuma ordem de construção válida foi encontrada no código.");
+                }
+                return finalExpandedOrder;
+
             } catch (e) {
                 console.error("Erro ao decodificar o código:", e);
                 throw new Error("O código fornecido é inválido ou está em um formato irreconhecível.");
             }
         }
-
-        async function initialize() {
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    populateBuildingControls();
-                    try {
-                        allProfiles = await apiRequest('build-orders');
-                        populateProfileSelect();
-                        renderScriptList();
-                        loadProfile('new');
-                    } catch (error) {
-                        showStatus(`Não foi possível carregar seus perfis: ${error.message}`, true);
-                    }
                 } else {
                     document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
                 }

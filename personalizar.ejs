@@ -1,13 +1,86 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    </head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personalizar Script - MULTCONTROL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; }
+        .navbar { background-color: #2c3e50; width: 100%; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .navbar-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: flex-start; }
+        .navbar a { float: left; color: white; text-align: center; padding: 14px 20px; text-decoration: none; font-size: 17px; font-weight: bold; transition: background-color 0.3s; }
+        .navbar a:hover { background-color: #3498db; }
+        .navbar a.active { background-color: #2980b9; }
+        .main-container { padding: 20px; width: 100%; max-width: 1100px; box-sizing: border-box; }
+        .grid-container { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
+        .panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        .building-control-row { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 8px; border-radius: 5px; border: 1px solid #e9ecef; }
+        .building-name { font-weight: 500; flex-basis: 50%; }
+        .building-inputs { display: flex; align-items: center; gap: 8px; }
+        .building-inputs input { width: 50px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+        .btn { border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: background-color 0.3s; }
+        .btn-add { background-color: #3498db; color: white; }
+        #custom-order-list { min-height: 200px; max-height: 500px; overflow-y: auto; border: 1px dashed #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; }
+        .order-item { display: flex; justify-content: space-between; align-items: center; background-color: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 5px; font-weight: 500; }
+        .delete-btn { background: #e57373; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 22px; text-align: center; }
+        .action-buttons { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .btn-save { background-color: #28a745; color: white; }
+        .btn-reset { background-color: #ffc107; color: #333; }
+        .btn-clear { background-color: #dc3545; color: white; }
+        #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
+        #final-script-output { width: 100%; height: 300px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 0.9em; margin-top: 10px; background-color: #2d2d2d; color: #dcdcdc; padding: 15px; border-radius: 5px; }
+        #status-message { margin-top: 15px; color: #218838; font-weight: bold; text-align: center; height: 20px; }
+    </style>
+</head>
 <body>
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('[DEBUG] 1. DOM totalmente carregado. Iniciando script.');
 
-        // --- CONFIGURAÇÕES ---
+<nav class="navbar">
+    <div class="navbar-container">
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/personalizar" class="active">Personalizar Scripts</a>
+    </div>
+</nav>
+
+<div class="main-container">
+    <h1>Ferramenta de Personalização do Script Upador</h1>
+    
+    <div class="grid-container">
+        <div class="panel add-panel">
+            <h2>Adicionar à Ordem</h2>
+            <div id="building-controls-container">
+                <p>Carregando controles...</p>
+            </div>
+        </div>
+
+        <div class="panel custom-order">
+            <h2>Sua Ordem de Construção</h2>
+            <div id="custom-order-list"><p>Carregando ordem padrão...</p></div>
+            <div class="action-buttons">
+                <button id="save-order-btn" class="btn btn-save">Salvar Ordem</button>
+                <button id="reset-order-btn" class="btn btn-reset">Usar Ordem Padrão</button>
+                <button id="clear-order-btn" class="btn btn-clear">Limpar Lista</button>
+            </div>
+            <div id="status-message"></div>
+        </div>
+
+        <div id="script-generation-panel" class="panel">
+            <h2>Gerar e Copiar seu Script</h2>
+            <p style="font-size: 0.9em; color: #666;">Após salvar sua ordem, clique para gerar o script final com suas modificações.</p>
+            <div class="action-buttons">
+                 <button id="generate-script-btn" class="btn btn-save">Gerar Script</button>
+                 <button id="copy-script-btn" class="btn btn-reset" style="display: none;">Copiar Script</button>
+            </div>
+            <textarea id="final-script-output" readonly placeholder="Seu script personalizado aparecerá aqui..."></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
         const BUILDING_INFO = {
             'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' },
             'garage': { name: 'Oficina', icon: '⚙️' }, 'smith': { name: 'Ferreiro', icon: '🛠️' }, 'place': { name: 'Praça de Reunião', icon: '🚩' },
@@ -20,86 +93,165 @@
         let DEFAULT_BUILD_ORDER = [];
         let currentBuildOrder = [];
 
-        // --- ELEMENTOS DA DOM ---
         const controlsContainer = document.getElementById('building-controls-container');
         const customList = document.getElementById('custom-order-list');
-        // ... (resto dos elementos)
+        const saveBtn = document.getElementById('save-order-btn');
+        const resetBtn = document.getElementById('reset-order-btn');
+        const clearBtn = document.getElementById('clear-order-btn');
+        const generateBtn = document.getElementById('generate-script-btn');
+        const copyBtn = document.getElementById('copy-script-btn');
+        const finalScriptOutput = document.getElementById('final-script-output');
+        const statusMsg = document.getElementById('status-message');
 
-        // --- FUNÇÕES ---
-        
         async function loadDefaultOrder() {
-            console.log('[DEBUG] 4. Entrando em loadDefaultOrder.');
             try {
-                console.log('[DEBUG] 5. Tentando fazer fetch para /api/get-raw-script/upador');
                 const response = await fetch('/api/get-raw-script/upador');
-                console.log(`[DEBUG] 6. Resposta do fetch recebida. Status: ${response.status}`);
-
-                if (!response.ok) {
-                    throw new Error(`Falha ao buscar o script padrão (Status: ${response.status})`);
-                }
+                if (!response.ok) throw new Error(`Falha ao buscar script (Status: ${response.status})`);
                 const scriptText = await response.text();
-                console.log('[DEBUG] 7. Texto do script recebido. Tentando parsear...');
-
-                const functionRegex = /const\s+Sequencia_Construcao\s*=\s*\[([\s\S]*?)\];/i;
-                const match = scriptText.match(functionRegex);
-
-                if (!match || !match[1]) {
-                    throw new Error('Não foi possível encontrar a "Sequencia_Construcao" no script.');
-                }
-                console.log('[DEBUG] 8. Regex encontrou a sequência. Extraindo itens...');
-
+                const regex = /const\s+Sequencia_Construcao\s*=\s*\[([\s\S]*?)\];/i;
+                const match = scriptText.match(regex);
+                if (!match || !match[1]) throw new Error('Não foi possível parsear a ordem do script.');
                 const items = match[1].match(/"(.*?)"/g) || [];
                 const parsedOrder = items.map(item => {
                     const cleanItem = item.replace(/"/g, '').trim();
                     const parts = cleanItem.split('_');
-                    if (parts.length === 4) {
-                        return { building: parts[2], level: parseInt(parts[3], 10) };
-                    }
+                    if (parts.length === 4) return { building: parts[2], level: parseInt(parts[3], 10) };
                     return null;
                 }).filter(Boolean);
-
-                if (parsedOrder.length === 0) {
-                    throw new Error('Nenhuma ordem de construção válida encontrada no script.');
-                }
-                
-                console.log(`[DEBUG] 9. Ordem padrão carregada com sucesso com ${parsedOrder.length} itens.`);
+                if (parsedOrder.length === 0) throw new Error('Ordem de construção vazia no script.');
                 return parsedOrder;
-
             } catch (error) {
-                console.error('[DEBUG] ERRO em loadDefaultOrder:', error);
                 showStatus(`Erro ao carregar ordem padrão: ${error.message}`, true);
-                return [{ building: 'wood', level: 1 }]; // Retorna fallback
+                return [{ building: 'wood', level: 1 }];
             }
         }
 
-        const showStatus = (message, isError = false) => { /* ... (sem alterações) ... */ };
-        const renderCustomOrder = () => { /* ... (sem alterações) ... */ };
+        const showStatus = (message, isError = false) => {
+            statusMsg.textContent = message;
+            statusMsg.style.color = isError ? '#d32f2f' : '#218838';
+            setTimeout(() => statusMsg.textContent = '', 4000);
+        };
+
+        const renderCustomOrder = () => {
+            customList.innerHTML = '';
+            if (currentBuildOrder.length === 0) {
+                customList.innerHTML = '<p>Sua ordem de construção está vazia.</p>';
+                return;
+            }
+            currentBuildOrder.forEach((item, index) => {
+                const info = BUILDING_INFO[item.building] || { name: item.building, icon: '❓' };
+                const el = document.createElement('div');
+                el.className = 'order-item';
+                el.innerHTML = `<span>${index + 1}. ${info.icon} <strong>${info.name}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`;
+                customList.appendChild(el);
+            });
+        };
+
         const populateBuildingControls = () => {
-            console.log('[DEBUG] 3. Entrando em populateBuildingControls para criar os botões.');
             controlsContainer.innerHTML = '';
             Object.keys(BUILDING_INFO).forEach(buildingKey => {
-                // ... (lógica interna sem alterações)
+                const info = BUILDING_INFO[buildingKey];
+                const controlRow = document.createElement('div');
+                controlRow.className = 'building-control-row';
+                controlRow.innerHTML = `
+                    <span class="building-name">${info.icon} ${info.name}</span>
+                    <div class="building-inputs">
+                        <input type="number" value="1" min="1" max="30" class="quantity-input" data-building="${buildingKey}">
+                        <button class="btn btn-add" data-building="${buildingKey}">Adicionar</button>
+                    </div>
+                `;
+                controlsContainer.appendChild(controlRow);
             });
-            console.log('[DEBUG] 3.1. Botões de edifícios criados.');
         };
-        
+
         async function initialize() {
-            console.log('[DEBUG] 2. Entrando na função initialize.');
             populateBuildingControls();
-            
             DEFAULT_BUILD_ORDER = await loadDefaultOrder();
-            console.log('[DEBUG] 10. Saí de loadDefaultOrder. Continuando a inicialização...');
-            
             const savedOrder = localStorage.getItem('customBuildOrder');
             currentBuildOrder = savedOrder ? JSON.parse(savedOrder) : [...DEFAULT_BUILD_ORDER];
             renderCustomOrder();
-            console.log('[DEBUG] 11. Inicialização completa. A página deve estar pronta.');
         }
 
-        // --- EVENT LISTENERS ---
-        // (Toda a lógica dos listeners continua a mesma)
+        controlsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-add')) {
+                const building = e.target.dataset.building;
+                const input = controlsContainer.querySelector(`.quantity-input[data-building="${building}"]`);
+                const quantity = parseInt(input.value, 10);
+                if (isNaN(quantity) || quantity < 1) { alert('Quantidade inválida.'); return; }
+                let lastLevel = 0;
+                for (let i = currentBuildOrder.length - 1; i >= 0; i--) {
+                    if (currentBuildOrder[i].building === building) {
+                        lastLevel = currentBuildOrder[i].level;
+                        break;
+                    }
+                }
+                for (let i = 1; i <= quantity; i++) {
+                    const newLevel = lastLevel + i;
+                    if (newLevel > 30) {
+                        showStatus(`Limite de nível 30 atingido para "${BUILDING_INFO[building].name}"`, true);
+                        break;
+                    }
+                    currentBuildOrder.push({ building, level: newLevel });
+                }
+                renderCustomOrder();
+            }
+        });
 
-        // --- INICIALIZAÇÃO DA PÁGINA ---
+        customList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                currentBuildOrder.splice(parseInt(e.target.dataset.index, 10), 1);
+                renderCustomOrder();
+            }
+        });
+
+        saveBtn.addEventListener('click', () => {
+            localStorage.setItem('customBuildOrder', JSON.stringify(currentBuildOrder));
+            showStatus('Ordem personalizada salva com sucesso!');
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Reverter para a ordem padrão original?')) {
+                currentBuildOrder = [...DEFAULT_BUILD_ORDER];
+                renderCustomOrder();
+            }
+        });
+        
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Atenção: Limpar toda a lista?')) {
+                currentBuildOrder = [];
+                renderCustomOrder();
+            }
+        });
+
+        generateBtn.addEventListener('click', async () => {
+            generateBtn.textContent = 'Gerando...';
+            generateBtn.disabled = true;
+            try {
+                const response = await fetch('/api/get-raw-script/upador');
+                if (!response.ok) throw new Error(`Falha ao buscar script (Status: ${response.status})`);
+                const baseScript = await response.text();
+                const newOrderString = currentBuildOrder.map(item => `        "main_buildlink_${item.building}_${item.level}"`).join(',\n');
+                const newFunctionString = `function getConstrucao_Edifcios_Serie() {\n    const Sequencia_Construcao = [\n${newOrderString}\n    ];\n\n    return Sequencia_Construcao;\n}`;
+                const regex = /function\s+getConstrucao_Edifcios_Serie\s*\(\)\s*\{[\s\S]*?\}/i;
+                if (!regex.test(baseScript)) throw new Error("Não foi possível encontrar a função 'getConstrucao_Edifcios_Serie()' no script.");
+                const finalScript = baseScript.replace(regex, newFunctionString);
+                finalScriptOutput.value = finalScript;
+                copyBtn.style.display = 'inline-block';
+                showStatus('Script gerado com sucesso!');
+            } catch (error) {
+                showStatus(`Erro: ${error.message}`, true);
+            } finally {
+                generateBtn.textContent = 'Gerar Script';
+                generateBtn.disabled = false;
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            finalScriptOutput.select();
+            document.execCommand('copy');
+            showStatus('Script copiado para a área de transferência!');
+        });
+
         initialize();
     });
 </script>

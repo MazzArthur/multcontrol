@@ -10,33 +10,17 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuração do View Engine (EJS)
+// --- CONFIGURAÇÃO E MIDDLEWARES ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname));
-
-// Middlewares
 app.use(cors());
 app.use(express.json());
-
-// Configuração do Helmet para Content Security Policy (CSP)
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: [
-                "'self'", 
-                "https://www.gstatic.com", 
-                "https://apis.google.com", 
-                "https://identitytoolkit.googleapis.com",
-                "'unsafe-inline'"
-            ], 
-            connectSrc: [
-                "'self'", 
-                "https://multcontrol.onrender.com", 
-                "https://securetoken.googleapis.com", 
-                "https://firestore.googleapis.com", 
-                "https://identitytoolkit.googleapis.com"
-            ], 
+            scriptSrc: [ "'self'", "https://www.gstatic.com", "https://apis.google.com", "https://identitytoolkit.googleapis.com", "'unsafe-inline'" ], 
+            connectSrc: [ "'self'", "https://multcontrol.onrender.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com", "https://identitytoolkit.googleapis.com" ], 
             imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://www.google.com", "https://dsbr.innogamescdn.com"],
             styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -46,7 +30,7 @@ app.use(helmet({
     },
 }));
 
-// Configuração do Firebase Admin SDK
+// --- INICIALIZAÇÃO DO FIREBASE ADMIN ---
 try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
     admin.initializeApp({
@@ -54,25 +38,22 @@ try {
     });
     console.log('[SERVER] Firebase Admin SDK inicializado com sucesso.');
 } catch (e) {
-    console.error('[SERVER ERROR] Falha ao inicializar Firebase Admin SDK. Verifique FIREBASE_SERVICE_ACCOUNT_KEY no .env:', e);
+    console.error('[SERVER ERROR] Falha ao inicializar Firebase Admin SDK:', e);
     process.exit(1);
 }
+const db = admin.firestore();
 
-const db = admin.firestore(); // Firestore Admin SDK instance
-
-// --- FUNÇÕES AUXILIARES (sem alterações) ---
+// --- FUNÇÕES AUXILIARES ---
 function getFirebaseClientConfig() {
     return {
-        apiKey: process.env.FIREBASE_API_KEY,
-        authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.FIREBASE_APP_ID,
+        apiKey: process.env.FIREBASE_API_KEY, authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.FIREBASE_PROJECT_ID, storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID, appId: process.env.FIREBASE_APP_ID,
         measurementId: process.env.FIREBASE_MEASUREMENT_ID
     };
 }
 
+// **FUNÇÃO RESTAURADA**
 function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {
     try {
         const filePath = path.resolve(__dirname, 'userscripts_content', fileName);
@@ -80,23 +61,13 @@ function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {
         const configPlaceholderRegex = /(const\s+FIREBASE_CLIENT_CONFIG\s*=\s*){};/;
         const firebaseClientConfig = getFirebaseClientConfig(); 
         if (configPlaceholderRegex.test(fileContent)) {
-            fileContent = fileContent.replace(
-                configPlaceholderRegex,
-                `$1${JSON.stringify(firebaseClientConfig)};`
-            );
+            fileContent = fileContent.replace(configPlaceholderRegex, `$1${JSON.stringify(firebaseClientConfig)};`);
         } else {
-            const configLine = `const FIREBASE_CLIENT_CONFIG = ${JSON.stringify(firebaseClientConfig)};\n`;
-            fileContent = configLine + fileContent;
+            fileContent = `const FIREBASE_CLIENT_CONFIG = ${JSON.stringify(firebaseClientConfig)};\n` + fileContent;
         }
         const userscriptKeyPlaceholderRegex = /(const\s+USERSCRIPT_API_KEY\s*=\s*)"";/;
         if (userscriptKeyPlaceholderRegex.test(fileContent)) {
-            fileContent = fileContent.replace(
-                userscriptKeyPlaceholderRegex,
-                `$1"${userscriptApiKeyToInject || 'CHAVE_AUSENTE_FAZER_LOGIN_NO_DASHBOARD'}";`
-            );
-        } else {
-            const userscriptKeyLine = `const USERSCRIPT_API_KEY = "${userscriptApiKeyToInject || 'CHAVE_AUSENTE_FAZER_LOGIN_NO_DASHBOARD'}";\n`;
-            fileContent = userscriptKeyLine + fileContent;
+            fileContent = fileContent.replace(userscriptKeyPlaceholderRegex, `$1"${userscriptApiKeyToInject || 'CHAVE_AUSENTE'}";`);
         }
         const oldIdTokenPlaceholderRegex = /(const\s+FIREBASE_AUTH_ID_TOKEN\s*=\s*)[^;]*;/;
         if (oldIdTokenPlaceholderRegex.test(fileContent)) {
@@ -105,251 +76,179 @@ function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {
         return Buffer.from(fileContent).toString('base64');
     } catch (error) {
         console.error(`[SERVER ERROR] Falha ao processar o script ${fileName}:`, error);
-        return Buffer.from(`// Erro: Não foi possível carregar o script ${fileName}.`).toString('base64');
+        return Buffer.from(`// Erro ao carregar script ${fileName}.`).toString('base64');
     }
 }
 
+
 // --- ROTAS DE PÁGINAS ---
-
-// Rota para a página de login
 app.get('/', (req, res) => {
-    const firebaseConfig = getFirebaseClientConfig();
-    res.render('index', { firebaseConfig: firebaseConfig });
+    res.render('index', { firebaseConfig: getFirebaseClientConfig() });
 });
-
-// Rota para a página de dashboard
-app.get('/dashboard.html', async (req, res) => {
-    const firebaseConfig = getFirebaseClientConfig();
-    const captchaScriptBase64 = readScriptFileAsBase64('captcha_script_content.js', 'CHAVE_AUSENTE_FAZER_LOGIN_NO_DASHBOARD'); 
-    const upadorScriptBase64 = readScriptFileAsBase64('upador_script_content.js', 'CHAVE_AUSENTE_FAZER_LOGIN_NO_DASHBOARD');
-    const ataquesScriptBase64 = readScriptFileAsBase64('ataques_script_content.js', 'CHAVE_AUSENTE_FAZER_LOGIN_NO_DASHBOARD');
-    res.render('dashboard', {
-        firebaseConfig: firebaseConfig,
-        captchaScriptBase64: captchaScriptBase64,
-        upadorScriptBase64: upadorScriptBase64,
-        ataquesScriptBase64: ataquesScriptBase64
-    });
+app.get('/dashboard.html', (req, res) => {
+    res.render('dashboard', { firebaseConfig: getFirebaseClientConfig() });
 });
-
-// Rota para a página de Personalização
 app.get('/personalizar', (req, res) => {
-    const firebaseConfig = getFirebaseClientConfig();
-    res.render('personalizar', { firebaseConfig: firebaseConfig });
+    res.render('personalizar', { firebaseConfig: getFirebaseClientConfig() });
 });
+
+// --- MIDDLEWARE DE AUTENTICAÇÃO PARA APIs ---
 const requireAuth = async (req, res, next) => {
-    const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
-    if (!idToken) {
-        return res.status(401).json({ error: 'Token de autenticação ausente.' });
-    }
+    const idToken = req.headers.authorization?.split('Bearer ')[1] || null;
+    if (!idToken) return res.status(401).json({ error: 'Token de autenticação ausente.' });
     try {
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         req.user = { uid: decodedToken.uid, email: decodedToken.email };
         next();
     } catch (error) {
-        console.error('[AUTH ERROR] Token inválido:', error);
         return res.status(403).json({ error: 'Falha na autenticação.' });
     }
 };
 
-// GET: Buscar todos os perfis de ordem de um usuário
+// ===========================================
+// ** ROTAS DE API **
+// ===========================================
+
+// --- API DE GERENCIAMENTO DE ORDENS DE CONSTRUÇÃO ---
 app.get('/api/build-orders', requireAuth, async (req, res) => {
     try {
-        const snapshot = await db.collection('buildOrders')
-            .where('userId', '==', req.user.uid)
-            .orderBy('createdAt', 'desc')
-            .get();
-            
+        const snapshot = await db.collection('buildOrders').where('userId', '==', req.user.uid).orderBy('createdAt', 'desc').get();
         const profiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         res.status(200).json(profiles);
-    } catch (error) {
-        console.error('[SERVER ERROR] Falha ao buscar ordens:', error);
-        res.status(500).json({ error: 'Erro ao buscar ordens de construção.' });
-    }
+    } catch (error) { res.status(500).json({ error: 'Erro ao buscar ordens. Verifique se o índice do Firestore foi criado.' }); }
 });
 
-// POST: Criar um novo perfil de ordem de construção
 app.post('/api/build-orders', requireAuth, async (req, res) => {
     const { profileName, order } = req.body;
-    if (!profileName || !order) {
-        return res.status(400).json({ error: 'Nome do perfil e ordem são obrigatórios.' });
-    }
+    if (!profileName || !order) return res.status(400).json({ error: 'Nome do perfil e ordem são obrigatórios.' });
     try {
-        const newProfile = {
-            userId: req.user.uid,
-            profileName,
-            order,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        };
+        const newProfile = { userId: req.user.uid, profileName, order, createdAt: admin.firestore.FieldValue.serverTimestamp() };
         const docRef = await db.collection('buildOrders').add(newProfile);
         res.status(201).json({ id: docRef.id, ...newProfile });
-    } catch (error) {
-        console.error('[SERVER ERROR] Falha ao criar ordem:', error);
-        res.status(500).json({ error: 'Erro ao criar ordem de construção.' });
-    }
+    } catch (error) { res.status(500).json({ error: 'Erro ao criar ordem.' }); }
 });
 
-// PUT: Atualizar um perfil de ordem existente
 app.put('/api/build-orders/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { profileName, order } = req.body;
-    if (!profileName || !order) {
-        return res.status(400).json({ error: 'Nome do perfil e ordem são obrigatórios.' });
-    }
+    if (!profileName || !order) return res.status(400).json({ error: 'Nome e ordem são obrigatórios.' });
     try {
         const docRef = db.collection('buildOrders').doc(id);
         const doc = await docRef.get();
-        if (!doc.exists || doc.data().userId !== req.user.uid) {
-            return res.status(404).json({ error: 'Perfil não encontrado ou não autorizado.' });
-        }
+        if (!doc.exists || doc.data().userId !== req.user.uid) return res.status(404).json({ error: 'Perfil não encontrado.' });
         await docRef.update({ profileName, order });
-        res.status(200).json({ message: 'Perfil atualizado com sucesso.' });
-    } catch (error) {
-        console.error('[SERVER ERROR] Falha ao atualizar ordem:', error);
-        res.status(500).json({ error: 'Erro ao atualizar ordem de construção.' });
-    }
+        res.status(200).json({ message: 'Perfil atualizado.' });
+    } catch (error) { res.status(500).json({ error: 'Erro ao atualizar ordem.' }); }
 });
 
-// DELETE: Deletar um perfil de ordem
 app.delete('/api/build-orders/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     try {
         const docRef = db.collection('buildOrders').doc(id);
         const doc = await docRef.get();
-        if (!doc.exists || doc.data().userId !== req.user.uid) {
-            return res.status(404).json({ error: 'Perfil não encontrado ou não autorizado.' });
-        }
+        if (!doc.exists || doc.data().userId !== req.user.uid) return res.status(404).json({ error: 'Perfil não encontrado.' });
         await docRef.delete();
-        res.status(200).json({ message: 'Perfil deletado com sucesso.' });
-    } catch (error) {
-        console.error('[SERVER ERROR] Falha ao deletar ordem:', error);
-        res.status(500).json({ error: 'Erro ao deletar ordem de construção.' });
-    }
+        res.status(200).json({ message: 'Perfil deletado.' });
+    } catch (error) { res.status(500).json({ error: 'Erro ao deletar ordem.' }); }
 });
-// Rota para o userscript obter um Custom Token fresco
-app.post('/api/get_fresh_id_token', async (req, res) => {
-    const userscriptApiKey = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
-    if (!userscriptApiKey) {
-        return res.status(401).json({ error: 'Userscript API Key ausente.' });
-    }
-    try {
-        const querySnapshot = await db.collection('userscriptKeys').where('userscriptKey', '==', userscriptApiKey).limit(1).get();
-        if (querySnapshot.empty) {
-            return res.status(401).json({ error: 'Userscript API Key inválida.' });
-        }
-        const uid = querySnapshot.docs[0].data().uid;
-        const customToken = await admin.auth().createCustomToken(uid);
-        res.json({ customToken: customToken });
-    } catch (error) {
-        console.error('[SERVER ERROR] Erro interno na rota /api/get_fresh_id_token:', error);
-        res.status(500).json({ error: 'Erro interno ao gerar Custom Token.' });
-    }
-});
-// *******************************************************************
-// ** NOVA ROTA DE API PARA SERVIR O CONTEÚDO BRUTO DE UM SCRIPT **
-// *******************************************************************
-app.get('/api/get-raw-script/:scriptName', (req, res) => {
+
+// --- API DE GERAÇÃO DE SCRIPTS ---
+app.get('/api/get-raw-script/:scriptName', requireAuth, (req, res) => {
     const scriptName = req.params.scriptName;
-    // Validação simples para segurança, permitindo apenas caracteres alfanuméricos e underscore
-    if (!/^[a-zA-Z0-9_]+$/.test(scriptName)) {
-        return res.status(400).send('Nome de script inválido.');
-    }
-
+    if (!/^[a-zA-Z0-9_]+$/.test(scriptName)) return res.status(400).send('Nome de script inválido.');
     const filePath = path.join(__dirname, 'userscripts_content', `${scriptName}_script_content.js`);
-
     fs.readFile(filePath, 'utf8', (err, data) => {
-        if (err) {
-            console.error(`[SERVER ERROR] Não foi possível ler o arquivo de script: ${filePath}`, err);
-            return res.status(404).send('Arquivo de script não encontrado.');
-        }
-        // Define o tipo de conteúdo como texto puro para o navegador interpretar corretamente
-        res.setHeader('Content-Type', 'text/plain');
-        res.send(data);
+        if (err) return res.status(404).send('Arquivo de script não encontrado.');
+        res.setHeader('Content-Type', 'text/plain').send(data);
     });
 });
 
+app.post('/api/generate-custom-script', requireAuth, async (req, res) => {
+    const { order } = req.body;
+    if (!order || !Array.isArray(order)) return res.status(400).json({ error: 'A ordem de construção é obrigatória.' });
+    try {
+        const filePath = path.join(__dirname, 'userscripts_content', `upador_script_content.js`);
+        let scriptText = fs.readFileSync(filePath, 'utf8');
 
-// --- ROTAS DE API EXISTENTES (sem alterações) ---
+        const newOrderString = order.map(item => `        "main_buildlink_${item.building}_${item.level}"`).join(',\n');
+        const newFunctionString = `function getConstrucao_Edifcios_Serie() {\n    const Sequencia_Construcao = [\n${newOrderString}\n    ];\n\n    return Sequencia_Construcao;\n}`;
+        const regex = /function\s+getConstrucao_Edifcios_Serie\s*\(\)\s*\{[\s\S]*?\}/i;
+        if (regex.test(scriptText)) scriptText = scriptText.replace(regex, newFunctionString);
 
-// Rota para receber e salvar alertas (POST)
+        const firebaseClientConfig = getFirebaseClientConfig();
+        const configRegex = /(const\s+FIREBASE_CLIENT_CONFIG\s*=\s*){};/;
+        if (configRegex.test(scriptText)) scriptText = scriptText.replace(configRegex, `$1${JSON.stringify(firebaseClientConfig)};`);
+
+        let userscriptApiKey;
+        const keyDoc = await db.collection('userscriptKeys').doc(req.user.uid).get();
+        if (keyDoc.exists) {
+            userscriptApiKey = keyDoc.data().userscriptKey;
+        } else {
+            userscriptApiKey = crypto.randomBytes(32).toString('hex');
+            await db.collection('userscriptKeys').doc(req.user.uid).set({ uid: req.user.uid, userscriptKey: userscriptApiKey, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        }
+        const keyRegex = /(const\s+USERSCRIPT_API_KEY\s*=\s*)"";/;
+        if (keyRegex.test(scriptText)) scriptText = scriptText.replace(keyRegex, `$1"${userscriptApiKey}";`);
+
+        res.setHeader('Content-Type', 'text/plain').send(scriptText);
+    } catch (error) {
+        console.error('[SERVER ERROR] Falha ao gerar script personalizado:', error);
+        res.status(500).json({ error: 'Erro interno ao gerar o script.' });
+    }
+});
+
+
+// --- ROTAS DE AUTENTICAÇÃO E ALERTA DOS SCRIPTS ---
 app.post('/alert', async (req, res) => {
     const { message } = req.body;
-    const authToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
-    if (!message || !authToken) {
-        return res.status(400).send('Mensagem de alerta ou Token de autenticação (Custom Token) ausente.');
-    }
+    const authToken = req.headers.authorization?.split('Bearer ')[1] || null;
+    if (!message || !authToken) return res.status(400).send('Mensagem ou token de autenticação ausente.');
     try {
         const decodedToken = await admin.auth().verifyIdToken(authToken);
-        const newAlert = {
+        await db.collection('alerts').add({
             message: message,
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             userId: decodedToken.uid,
             userEmail: decodedToken.email || 'N/A'
-        };
-        await db.collection('alerts').add(newAlert);
-        res.status(200).send('Alerta recebido e salvo com sucesso!');
-    } catch (error) {
-        console.error('[SERVER ERROR] Erro ao verificar Token ou salvar alerta:', error);
-        res.status(401).send('Não autorizado ou erro ao processar alerta.');
-    }
+        });
+        res.status(200).send('Alerta recebido com sucesso!');
+    } catch (error) { res.status(401).send('Não autorizado ou erro ao processar alerta.'); }
 });
 
-// Rota para o dashboard obter os scripts com o token preenchido
-app.get('/get_userscripts_with_token', async (req, res) => {
-    const idToken = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
-    if (!idToken) {
-        return res.status(401).json({ error: 'Não autorizado. Token de autenticação ausente.' });
-    }
+app.post('/api/get_fresh_id_token', async (req, res) => {
+    const userscriptApiKey = req.headers.authorization?.split('Bearer ')[1] || null;
+    if (!userscriptApiKey) return res.status(401).json({ error: 'Userscript API Key ausente.' });
     try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const uid = decodedToken.uid;
+        const querySnapshot = await db.collection('userscriptKeys').where('userscriptKey', '==', userscriptApiKey).limit(1).get();
+        if (querySnapshot.empty) return res.status(401).json({ error: 'Userscript API Key inválida.' });
+        const uid = querySnapshot.docs[0].data().uid;
+        const customToken = await admin.auth().createCustomToken(uid);
+        res.json({ customToken: customToken });
+    } catch (error) { res.status(500).json({ error: 'Erro interno ao gerar Custom Token.' }); }
+});
+
+// **ROTA RESTAURADA**
+app.get('/get_userscripts_with_token', requireAuth, async (req, res) => {
+    try {
         let userscriptKey;
-        const keyDoc = await db.collection('userscriptKeys').doc(uid).get();
+        const keyDoc = await db.collection('userscriptKeys').doc(req.user.uid).get();
         if (keyDoc.exists) {
             userscriptKey = keyDoc.data().userscriptKey;
         } else {
             userscriptKey = crypto.randomBytes(32).toString('hex');
-            await db.collection('userscriptKeys').doc(uid).set({
-                uid: uid,
-                userscriptKey: userscriptKey,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
-            });
+            await db.collection('userscriptKeys').doc(req.user.uid).set({ uid: req.user.uid, userscriptKey: userscriptKey, createdAt: admin.firestore.FieldValue.serverTimestamp() });
         }
         const captchaScriptBase64 = readScriptFileAsBase64('captcha_script_content.js', userscriptKey); 
         const upadorScriptBase64 = readScriptFileAsBase64('upador_script_content.js', userscriptKey);
         const ataquesScriptBase64 = readScriptFileAsBase64('ataques_script_content.js', userscriptKey);
-        res.json({
-            captchaScriptBase64: captchaScriptBase64,
-            upadorScriptBase64: upadorScriptBase64,
-            ataquesScriptBase64: ataquesScriptBase64
-        });
+        res.json({ captchaScriptBase64, upadorScriptBase64, ataquesScriptBase64 });
     } catch (error) {
-        console.error('[SERVER ERROR] Erro interno na rota /get_userscripts_with_token:', error);
         res.status(500).json({ error: 'Erro interno ao gerar scripts.' });
     }
 });
 
-// Rota para o userscript obter um Custom Token fresco
-app.post('/api/get_fresh_id_token', async (req, res) => {
-    const userscriptApiKey = req.headers.authorization ? req.headers.authorization.split('Bearer ')[1] : null;
-    if (!userscriptApiKey) {
-        return res.status(401).json({ error: 'Userscript API Key ausente.' });
-    }
-    try {
-        const querySnapshot = await db.collection('userscriptKeys').where('userscriptKey', '==', userscriptApiKey).limit(1).get();
-        if (querySnapshot.empty) {
-            return res.status(401).json({ error: 'Userscript API Key inválida.' });
-        }
-        const uid = querySnapshot.docs[0].data().uid;
-        const customToken = await admin.auth().createCustomToken(uid);
-        res.json({ customToken: customToken });
-    } catch (error) {
-        console.error('[SERVER ERROR] Erro interno na rota /api/get_fresh_id_token:', error);
-        res.status(500).json({ error: 'Erro interno ao gerar Custom Token.' });
-    }
-});
 
-
-// Servidor Express escutando na porta
+// --- INICIAR SERVIDOR ---
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

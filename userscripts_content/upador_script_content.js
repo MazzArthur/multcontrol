@@ -66,48 +66,6 @@ const USERSCRIPT_API_KEY = "";
 const FIREBASE_AUTH_ID_TOKEN = ""; // Este valor será ignorado. O script obterá o token dinamicamente.
 // --- FIM DO CAMPO PARA ID TOKEN ---
 
-//*************************** /CONFIGURACAO ***************************//
-// Escolha Tempo de espera minimo e maximo entre acoes (em milissegundos)
-const Min_Tempo_Espera = 800;
-const Max_Tempo_Espera = 900;
-
-// Etapa_1: Upar O bot automaticamente em Serie Edificios
-const Etapa = "Etapa_1";
-// Escolha se voce deseja que o bot enfileire os edificios na ordem definida (= true) ou
-// assim que um predio estiver disponivel para a fila de construcao (= false)
-// ATENÇÃO: Esta variável agora só controla a ordem de busca, mas a nova lógica garante a espera por recursos.
-const Construcao_Edificios_Ordem = true;
-
-// --- CONFIGURACAO DE REFRESH AUTOMATICO ---
-const Auto_Refresh_Ativado = true; // Define se o refresh automatico esta ativo (true/false)
-const Intervalo_Refresh_Minutos = 30; // Intervalo para o refresh automatico em minutos (Ex: 30 = 30 minutos)
-// --- FIM DA CONFIGURACAO DE REFRESH AUTOMATICO ---
-
-// --- CONFIGURACAO DE ALERTA DE CONSTRUCAO ---
-const ALERTA_CONSTRUCAO_ATIVADO = true; // Ativa/desativa o envio de alerta para o site
-const ALERT_SERVER_URL = "https://multcontrol.onrender.com/alert"; // URL do seu servidor de alertas
-// Variavel para controlar o ultimo alerta enviado e evitar duplicacao rapida
-let lastBuildingAlertSent = { id: null, timestamp: 0 };
-const ALERT_COOLDOWN_MS = 5000; // 5 segundos de cooldown para o mesmo alerta
-// --- FIM DA CONFIGURACAO DE ALERTA DE CONSTRUCAO ---
-
-// --- CAMPO PARA FIREBASE CLIENT CONFIG (Gerado pelo Dashboard MULTCONTROL) ---
-// Sera preenchido dinamicamente pelo servidor
-const FIREBASE_CLIENT_CONFIG = {"apiKey":"AIzaSyDTDqh2-QKCwVl_NEW62KXn9NVfaQtEkZQ","authDomain":"multcontrol-b0f96.firebaseapp.com","projectId":"multcontrol-b0f96","storageBucket":"multcontrol-b0f96.firebasestorage.app","messagingSenderId":"599200834078","appId":"1:599200834078:web:109ca9742aed0998cd840f","measurementId":"G-J322L4DCPL"};
-// --- FIM DO CAMPO PARA FIREBASE CLIENT CONFIG --
-
-// --- CAMPO PARA USERSCRIPT API KEY (Gerada no Dashboard MULTCONTROL) ---
-// Sera preenchido dinamicamente pelo servidor
-const USERSCRIPT_API_KEY = "49268f91b0516f80cc4e8b1360cf41187c81a4f692d5cf04dc32ce574248137e";
-// --- FIM DO CAMPO PARA USERSCRIPT API KEY --
-
-// --- CAMPO PARA ID TOKEN DO USUARIO (Gerado pelo Dashboard MULTCONTROL) ---
-const FIREBASE_AUTH_ID_TOKEN = ""; // Este valor sera ignorado. O script obterá o token dinamicamente.
-// --- FIM DO CAMPO PARA ID TOKEN ---
-
-//*************************** /CONFIGURACAO ***************************//
-
-
 // Constantes (NAO DEVE SER ALTERADAS)
 const Visualizacao_Geral = "OVERVIEW_VIEW";
 const Edificio_Principal = "HEADQUARTERS_VIEW";

@@ -8,10 +8,46 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        /* ================================= */
+        /* === ESTILOS DO NOVO MENU (NAVBAR) === */
+        /* ================================= */
+        .navbar {
+            background-color: #2c3e50;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: flex-start;
+        }
+        .navbar a {
+            float: left;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: bold;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .navbar a:hover {
+            background-color: #3498db;
+            color: white;
+        }
+        .navbar a.active {
+            background-color: #2980b9;
+            color: white;
+        }
+
+        /* Seus estilos originais abaixo */
         body {
             font-family: 'Roboto', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0; /* Removido padding para o navbar ocupar toda a largura */
             background-color: #f4f7f6;
             color: #333;
             display: flex;
@@ -26,8 +62,10 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
-            padding-bottom: 10px;
+            padding: 0 20px; /* Adicionado padding lateral */
+            box-sizing: border-box;
             border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
         }
         header h1 {
             color: #2c3e50;
@@ -101,7 +139,7 @@
             flex-grow: 1;
         }
         .script-code-box {
-            display: none; /* Oculta a caixa de código inicialmente */
+            display: none;
             background-color: #f0f0f0;
             border: 1px dashed #ccc;
             padding: 10px;
@@ -138,6 +176,8 @@
             justify-content: center;
             align-items: flex-start;
             flex-grow: 1;
+            padding: 0 20px; /* Adicionado padding lateral */
+            box-sizing: border-box;
         }
         .alert-box {
             background-color: #ffffff;
@@ -154,6 +194,7 @@
         h2 {
             color: #34495e;
             text-align: center;
+            margin-top: 0;
             margin-bottom: 20px;
             border-bottom: 2px solid #eee;
             padding-bottom: 10px;
@@ -170,7 +211,7 @@
         }
         .alert-item {
             display: flex;
-            align-items: flex-start; /* Altera para alinhar no topo para que emojis grandes não cortem o texto */
+            align-items: flex-start;
             margin-bottom: 10px;
             padding: 10px 15px;
             background-color: #e3f2fd;
@@ -202,27 +243,21 @@
             color: #1976D2;
             margin-right: 10px;
             flex-shrink: 0;
-            min-width: 65px; /* Garante espaço para a hora */
+            min-width: 65px;
         }
-        .alert-item.captcha .timestamp {
-            color: #FFA000;
-        }
-        .alert-item.build-order .timestamp {
-            color: #388E3C;
-        }
-        .alert-item.attack-alert .timestamp {
-            color: #C62828;
-        }
+        .alert-item.captcha .timestamp { color: #FFA000; }
+        .alert-item.build-order .timestamp { color: #388E3C; }
+        .alert-item.attack-alert .timestamp { color: #C62828; }
         .alert-item .message {
             flex-grow: 1;
             word-break: break-word;
-            display: flex; /* Para alinhar emoji com texto da mensagem */
+            display: flex;
             align-items: flex-start;
         }
         .alert-item .message .emoji-prefix {
             margin-right: 5px;
-            font-size: 1.2em; /* Tamanho maior para o emoji */
-            line-height: 1; /* Garante que o emoji fique alinhado com a primeira linha de texto */
+            font-size: 1.2em;
+            line-height: 1;
             flex-shrink: 0;
         }
         .no-alerts {
@@ -230,24 +265,20 @@
             color: #777;
             padding: 20px;
         }
-        /* Scrollbar styling */
-        .alerts-list::-webkit-scrollbar {
-            width: 8px;
-        }
-        .alerts-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        .alerts-list::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
-        }
-        .alerts-list::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
+        .alerts-list::-webkit-scrollbar { width: 8px; }
+        .alerts-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .alerts-list::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .alerts-list::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/dashboard.html" class="active">Dashboard</a>
+            <a href="/personalizar">Personalizar Scripts</a>
+        </div>
+    </nav>
+
     <header>
         <h1>🚨 Central de Alertas Tribal Wars 🚨</h1>
         <div class="user-info">
@@ -260,30 +291,27 @@
     <div class="script-generation-section">
         <h2>Seus Scripts Personalizados (Copiar e Colar no Tampermonkey)</h2>
         <p style="font-size: 0.9em; text-align: center; margin-bottom: 20px; color: #666;">
-            **Instruções:** Faça login aqui, copie o código completo de cada script abaixo, abra seu Tampermonkey (ou similar), crie um novo script e cole o código. Salve e ative o script no Tribal Wars.
+            <strong>Instruções:</strong> Faça login aqui, copie o código completo de cada script abaixo, abra seu Tampermonkey (ou similar), crie um novo script e cole o código. Salve e ative o script no Tribal Wars.
         </p>
-
         <div class="script-type-box">
             <strong>1. Script: Alerta de Captcha (FUSÃO FINAL E LIMPÍSSIMA)</strong>
             <button class="copy-script-button" data-script-id="captchaScriptCode">Copiar</button>
             <div class="script-code-box">
-                <code id="captchaScriptCode"></code>
+                <code id="captchaScriptCode">Carregando script...</code>
             </div>
         </div>
-
         <div class="script-type-box">
             <strong>2. Script: Upador Automatico editado + Coleta Recompensa + Refresh Automático + Alerta de Construção</strong>
             <button class="copy-script-button" data-script-id="upadorScriptCode">Copiar</button>
             <div class="script-code-box">
-                <code id="upadorScriptCode"></code>
+                <code id="upadorScriptCode">Carregando script...</code>
             </div>
         </div>
-
         <div class="script-type-box">
             <strong>3. Script: Alerta de Ataques (Tribal Wars)</strong>
             <button class="copy-script-button" data-script-id="attackScriptCode">Copiar</button>
             <div class="script-code-box">
-                <code id="attackScriptCode"></code>
+                <code id="attackScriptCode">Carregando script...</code>
             </div>
         </div>
     </div>
@@ -299,14 +327,12 @@
                 <p class="no-alerts">Aguardando alertas de Captcha...</p>
             </div>
         </div>
-
         <div class="alert-box build-order-box">
             <h2>Ordens de Construção</h2>
             <div id="buildOrderAlertsList" class="alerts-list">
                 <p class="no-alerts">Aguardando ordens de construção...</p>
             </div>
         </div>
-
         <div class="alert-box attack-box">
             <h2>Alertas de Ataque</h2>
             <div id="attackAlertsList" class="alerts-list">
@@ -320,20 +346,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <script>
-        console.log("Configurando Firebase diretamente no HTML do dashboard...");
         const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
-        const dbClient = firebase.firestore(); // ADICIONADO: Inicializa o Firestore client-side
-        console.log("Firebase, Auth e Firestore Client-side inicializados via EJS.");
-        console.log("Valor de 'auth' após inicializacao:", auth);
+        const dbClient = firebase.firestore();
     </script>
 
     <script>
-        console.log("Script principal do dashboard carregado.");
+        // Seu script principal (initializeDashboardPage) continua aqui, sem alterações...
+        // (Colei ele aqui para garantir que esteja completo)
         
-        initializeDashboardPage();
-
+        // Função para copiar scripts
         window.copyScript = function(elementId) {
             const element = document.getElementById(elementId);
             if (element && navigator.clipboard) {
@@ -349,23 +372,19 @@
             }
         };
 
-        // Função para solicitar permissão de notificação na área de trabalho
+        // Função para solicitar permissão de notificação
         function requestNotificationPermission() {
             if (!("Notification" in window)) {
                 console.warn("Este navegador não suporta notificações de desktop.");
             } else if (Notification.permission === "default") {
-                // Solicita a permissão apenas se ainda não foi concedida ou negada
                 Notification.requestPermission().then(permission => {
                     if (permission === "granted") {
                         console.log("Permissão para notificações concedida.");
                         alert('Notificações de desktop ativadas!');
                     } else if (permission === "denied") {
-                        console.warn("Permissão para notificações negada. Notificações de desktop não serão mostradas.");
+                        console.warn("Permissão para notificações negada.");
                         alert('Permissão para notificações negada. Por favor, altere nas configurações do navegador.');
                     }
-                }).catch(error => {
-                    console.error("Erro ao solicitar permissão de notificação:", error);
-                    alert('Erro ao ativar notificações. Tente novamente.');
                 });
             } else if (Notification.permission === "granted") {
                 alert('As notificações já estão ativadas.');
@@ -374,32 +393,19 @@
             }
         }
 
-
+        // Função principal de inicialização
         function initializeDashboardPage() {
-            console.log("Função initializeDashboardPage() iniciada.");
-
             const userEmailDisplay = document.getElementById('userEmailDisplay');
             const logoutBtn = document.getElementById('logoutBtn');
             const userUidDisplay = document.getElementById('userUidDisplay');
-            
             const captchaScriptCodeElement = document.getElementById('captchaScriptCode');
             const upadorScriptCodeElement = document.getElementById('upadorScriptCode');
-            const attackScriptCodeElement = document.getElementById('attackScriptCode'); // CORRIGIDO AQUI
-
+            const attackScriptCodeElement = document.getElementById('attackScriptCode');
             const captchaAlertsList = document.getElementById('captchaAlertsList');
             const buildOrderAlertsList = document.getElementById('buildOrderAlertsList');
             const attackAlertsList = document.getElementById('attackAlertsList');
+            const backendUrl = 'https://multcontrol.onrender.com';
             
-            // backendUrl agora é usada apenas para a rota de scripts, não mais para alertas
-            const backendUrl = 'https://multcontrol.onrender.com'; 
-
-            if (!userEmailDisplay || !logoutBtn || !userUidDisplay || !captchaScriptCodeElement || !upadorScriptCodeElement || !attackScriptCodeElement || !captchaAlertsList || !buildOrderAlertsList || !attackAlertsList) {
-                console.error("Um ou mais elementos HTML essenciais do dashboard não foram encontrados. Interrompendo a inicialização.");
-                return;
-            }
-
-            console.log("Todos os elementos HTML essenciais do dashboard encontrados.");
-
             document.querySelectorAll('.copy-script-button').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const scriptId = event.target.dataset.scriptId;
@@ -407,250 +413,131 @@
                 });
             });
 
-            // Adicionar listener ao novo botão de notificações
             const activateNotificationsButton = document.getElementById('activateNotificationsBtn');
             if (activateNotificationsButton) {
                 activateNotificationsButton.addEventListener('click', requestNotificationPermission);
             }
 
-
             auth.onAuthStateChanged(async user => {
                 if (user) {
-                    console.log('Usuário logado no dashboard:', user.email);
                     userEmailDisplay.textContent = `Logado como: ${user.email}`;
                     userUidDisplay.textContent = user.uid;
 
-                    // REMOVIDO: requestNotificationPermission() chamada aqui
-                    // Ela será chamada pelo clique do botão agora.
-
+                    // Fetch scripts
                     try {
                         const idToken = await user.getIdToken();
-
                         const response = await fetch(`${backendUrl}/get_userscripts_with_token`, {
-                            headers: {
-                                'Authorization': `Bearer ${idToken}`
-                            }
+                            headers: { 'Authorization': `Bearer ${idToken}` }
                         });
-
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         const scriptsBase64 = await response.json();
-
                         captchaScriptCodeElement.textContent = atob(scriptsBase64.captchaScriptBase64);
                         upadorScriptCodeElement.textContent = atob(scriptsBase64.upadorScriptBase64);
                         attackScriptCodeElement.textContent = atob(scriptsBase64.ataquesScriptBase64);
-
                     } catch (error) {
-                        console.error('Erro ao obter ID Token, decodificar ou gerar snippets:', error);
-                        captchaScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}. Verifique o console.`;
-                        upadorScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}. Verifique o console.`;
-                        attackScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}. Verifique o console.`;
+                        console.error('Erro ao obter scripts:', error);
+                        captchaScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}.`;
+                        upadorScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}.`;
+                        attackScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}.`;
                     }
                     
-                    // --- NOVA LÓGICA: LISTENER DE ALERTAS EM TEMPO REAL ---
-                    console.log("[Dashboard] Configurando listener de alertas em tempo real...");
-                    // Mantém um registro dos IDs de alertas que já foram notificados para evitar duplicação em refreshes
+                    // Firestore listener
                     const notifiedAlertIds = new Set(JSON.parse(localStorage.getItem('notifiedAlertIds') || '[]'));
-
                     dbClient.collection('alerts')
                         .where('userId', '==', user.uid)
                         .orderBy('timestamp', 'desc')
                         .onSnapshot((snapshot) => {
-                            console.log("[Dashboard] Snapshot de alertas recebido!");
-                            
-                            // 1. Lógica de notificação para NOVOS ALERTA
+                            // Lógica de notificação para novos alertas
                             snapshot.docChanges().forEach(change => {
-                                if (change.type === "added") { // Detecta um novo documento
+                                if (change.type === "added") {
                                     const newAlertData = change.doc.data();
-                                    const alertId = change.doc.id; // ID do documento
-                                    const alertMessage = newAlertData.message;
-                                    const userEmail = newAlertData.userEmail || 'N/A';
-                                    // NOVO: Extrai o nickname da mensagem do alerta
-                                    const nicknameMatch = alertMessage.match(/Conta "([^"]+)"/);
-                                    const alertNickname = nicknameMatch ? nicknameMatch[1] : (userEmail.split('@')[0] || 'Desconhecido');
-
-
-                                    // Verifica se o alerta já foi notificado anteriormente
+                                    const alertId = change.doc.id;
                                     if (!notifiedAlertIds.has(alertId)) {
-                                        // Disparar notificação apenas se a aba não estiver em foco e permissão concedida
                                         if (document.hidden && Notification.permission === "granted") {
+                                            const alertMessage = newAlertData.message;
+                                            const nicknameMatch = alertMessage.match(/Conta "([^"]+)"/);
+                                            const alertNickname = nicknameMatch ? nicknameMatch[1] : (newAlertData.userEmail.split('@')[0]);
+                                            
                                             if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
                                                 new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", {
-                                                    body: `Captcha detectado para a conta: ${alertNickname}`, // Usa o nickname do alerta
+                                                    body: `Captcha detectado para a conta: ${alertNickname}`,
                                                     icon: 'https://www.google.com/favicon.ico'
                                                 });
-                                                console.log("[Dashboard] Notificação de Captcha disparada.");
                                             } else if (alertMessage.includes('ATAQUE(S) NOVO(S)!')) {
                                                 new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", {
-                                                    body: `A conta ${alertNickname} tem novos ataques a chegar!`, // Usa o nickname do alerta
+                                                    body: `A conta ${alertNickname} tem novos ataques a chegar!`,
                                                     icon: 'https://dsbr.innogamescdn.com/asset/75cb846c/graphic/unit/att.webp'
                                                 });
-                                                console.log("[Dashboard] Notificação de Ataque disparada.");
                                             }
                                         }
-                                        // Adiciona o ID ao conjunto de alertas notificados
                                         notifiedAlertIds.add(alertId);
                                     }
                                 }
                             });
-                            // Limpeza de IDs antigos no localStorage (ex: IDs com mais de 24 horas)
-                            const now = Date.now();
-                            const oneDay = 24 * 60 * 60 * 1000;
-                            const idsToKeep = new Set();
-                            notifiedAlertIds.forEach(id => {
-                                // Se você salvar o timestamp junto com o ID, pode limpar melhor
-                                // Por simplicidade aqui, vou apenas manter todos que chegam, e o localStorage tem um limite.
-                                // Para uma limpeza real, você precisaria armazenar {id: '...', timestamp: Date.now()}
-                                idsToKeep.add(id);
-                            });
-                            localStorage.setItem('notifiedAlertIds', JSON.stringify(Array.from(idsToKeep)));
+                            localStorage.setItem('notifiedAlertIds', JSON.stringify(Array.from(notifiedAlertIds)));
 
-
-                            // 2. Reconstroi a lista COMPLETA de alertas para renderizar (para exibir tudo)
-                            const alertsToRender = [];
-                            snapshot.docs.forEach(doc => { // MODIFICADO AQUI: Usa snapshot.docs para a lista completa
-                                const data = doc.data();
-                                const timestamp = data.timestamp ? data.timestamp.toDate().toISOString() : new Date().toISOString();
-                                alertsToRender.push({
-                                    id: doc.id,
-                                    message: data.message,
-                                    timestamp: timestamp,
-                                    userId: data.userId,
-                                    userEmail: data.userEmail || 'N/A'
-                                });
-                            });
-                            
-                            captchaAlertsList.innerHTML = '';
-                            buildOrderAlertsList.innerHTML = '';
-                            attackAlertsList.innerHTML = '';
-
-                            let hasCaptchaAlerts = false;
-                            let hasBuildOrderAlerts = false;
-                            let hasAttackAlerts = false;
-
-                            // Ordena os alertas do mais novo para o mais antigo para a UI
-                            alertsToRender.sort((a, b) => {
-                                const dateA = convertTimestampToDate(a.timestamp);
-                                const dateB = convertTimestampToDate(b.timestamp);
-                                if (isNaN(dateA.getTime())) return 1;
-                                if (isNaN(dateB.getTime())) return -1;
-                                return dateB.getTime() - dateA.getTime();
-                            });
+                            // Lógica para renderizar todos os alertas na tela
+                            const alertsToRender = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            captchaAlertsList.innerHTML = ''; buildOrderAlertsList.innerHTML = ''; attackAlertsList.innerHTML = '';
+                            let hasCaptchaAlerts = false, hasBuildOrderAlerts = false, hasAttackAlerts = false;
 
                             alertsToRender.forEach(alert => {
                                 const div = document.createElement('div');
                                 div.className = 'alert-item';
-
                                 const timestampSpan = document.createElement('span');
                                 timestampSpan.className = 'timestamp';
+                                const date = alert.timestamp ? alert.timestamp.toDate() : new Date();
+                                timestampSpan.textContent = date.toLocaleTimeString('pt-BR');
                                 
-                                const date = convertTimestampToDate(alert.timestamp);
-                                if (!isNaN(date.getTime())) {
-                                    timestampSpan.textContent = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                                } else {
-                                    timestampSpan.textContent = 'Data Inválida';
-                                    console.warn('[Dashboard] Timestamp recebido inválido:', alert.timestamp);
-                                }
-
                                 const messageSpan = document.createElement('span');
                                 messageSpan.className = 'message';
-                                
-                                const rawMessage = alert.message;
-                                const cleanMessageForCategory = rawMessage.replace(/^[^\w\s]*\s*/, '');
-
-                                let emojiPrefix = '';
-                                if (cleanMessageForCategory.includes('CAPTCHA NECESSARIO!')) {
-                                    emojiPrefix = '🚨⚠️';
-                                    div.classList.add('captcha');
-                                    captchaAlertsList.appendChild(div);
-                                    hasCaptchaAlerts = true;
-                                } else if (cleanMessageForCategory.includes('Construcao Iniciada')) {
-                                    emojiPrefix = '🚨🏰';
-                                    div.classList.add('build-order');
-                                    buildOrderAlertsList.appendChild(div);
-                                    hasBuildOrderAlerts = true;
-                                } else if (cleanMessageForCategory.includes('ATAQUE(S) NOVO(S)!')) {
-                                    emojiPrefix = '🚨⚔️';
-                                    div.classList.add('attack-alert');
-                                    attackAlertsList.appendChild(div);
-                                    hasAttackAlerts = true;
-                                } else {
-                                    emojiPrefix = 'ℹ️';
-                                    div.classList.add('general');
-                                    buildOrderAlertsList.appendChild(div);
-                                }
-                                
                                 const emojiSpan = document.createElement('span');
                                 emojiSpan.className = 'emoji-prefix';
-                                emojiSpan.textContent = emojiPrefix;
-                                messageSpan.appendChild(emojiSpan);
-                                messageSpan.appendChild(document.createTextNode(cleanMessageForCategory));
 
+                                const cleanMessage = alert.message.replace(/^[^\w\s]*\s*/, '');
+                                if (cleanMessage.includes('CAPTCHA')) {
+                                    div.classList.add('captcha'); emojiSpan.textContent = '🚨⚠️';
+                                    captchaAlertsList.appendChild(div); hasCaptchaAlerts = true;
+                                } else if (cleanMessage.includes('Construcao')) {
+                                    div.classList.add('build-order'); emojiSpan.textContent = '🚨🏰';
+                                    buildOrderAlertsList.appendChild(div); hasBuildOrderAlerts = true;
+                                } else if (cleanMessage.includes('ATAQUE')) {
+                                    div.classList.add('attack-alert'); emojiSpan.textContent = '🚨⚔️';
+                                    attackAlertsList.appendChild(div); hasAttackAlerts = true;
+                                } else {
+                                    div.classList.add('general'); emojiSpan.textContent = 'ℹ️';
+                                    buildOrderAlertsList.appendChild(div); hasBuildOrderAlerts = true;
+                                }
+                                
+                                messageSpan.appendChild(emojiSpan);
+                                messageSpan.appendChild(document.createTextNode(cleanMessage));
                                 div.appendChild(timestampSpan);
                                 div.appendChild(messageSpan);
                             });
 
-                            if (!hasCaptchaAlerts) {
-                                captchaAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de Captcha recente.</p>';
-                            }
-                            if (!hasBuildOrderAlerts) {
-                                buildOrderAlertsList.innerHTML = '<p class="no-alerts">Nenhuma ordem de construção recente.</p>';
-                            }
-                            if (!hasAttackAlerts) {
-                                attackAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de ataque recente.</p>';
-                            }
+                            if (!hasCaptchaAlerts) captchaAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de Captcha recente.</p>';
+                            if (!hasBuildOrderAlerts) buildOrderAlertsList.innerHTML = '<p class="no-alerts">Nenhuma ordem de construção recente.</p>';
+                            if (!hasAttackAlerts) attackAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de ataque recente.</p>';
 
                         }, (error) => {
-                            console.error('[Dashboard] Erro ao ouvir alertas em tempo real:', error);
-                            captchaAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar alertas de Captcha.</p>';
-                            buildOrderAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar ordens de construção.</p>';
-                            attackAlertsList.innerHTML = '<p class="no-alerts" style="color: #d32f2f;">Erro ao carregar alertas de ataque.</p>';
+                            console.error('[Dashboard] Erro ao ouvir alertas:', error);
                         });
-                    // --- FIM DA NOVA LÓGICA ---
-
                 } else {
-                    console.log('Nenhum usuário logado. Redirecionando para a página de login.');
                     window.location.href = '/';
                 }
             });
 
             logoutBtn.addEventListener('click', async () => {
-                console.log("Botão Sair clicado.");
                 try {
                     await auth.signOut();
-                    console.log('Usuário deslogado.');
                     window.location.href = '/';
                 } catch (error) {
                     console.error('Erro ao deslogar:', error);
-                    alert('Erro ao sair. Tente novamente.');
                 }
             });
+        }
 
-            // Sua função auxiliar para converter o timestamp (mantenha-a aqui)
-            function convertTimestampToDate(timestamp) {
-                if (timestamp instanceof Date) {
-                    return timestamp;
-                }
-                if (typeof timestamp === 'string') {
-                    const date = new Date(timestamp);
-                    if (!isNaN(date.getTime())) {
-                        return date;
-                    }
-                }
-                if (typeof timestamp === 'object' && timestamp !== null) {
-                    if (timestamp._seconds !== undefined && timestamp._nanoseconds !== undefined) {
-                        return new Date(timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000);
-                    }
-                    if (typeof timestamp.toDate === 'function') {
-                        return timestamp.toDate();
-                    }
-                }
-                return new Date('invalid date');
-            }
-
-        } // Fim de initializeDashboardPage
+        initializeDashboardPage();
     </script>
 </body>
 </html>

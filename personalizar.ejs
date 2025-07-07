@@ -33,6 +33,7 @@
         .building-inputs { display: flex; align-items: center; gap: 8px; }
         .building-inputs input { width: 50px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
         .btn { border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: background-color 0.3s; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-add { background-color: #3498db; color: white; }
         #custom-order-list { min-height: 200px; max-height: 500px; overflow-y: auto; border: 1px dashed #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; }
         .order-item { display: flex; justify-content: space-between; align-items: center; background-color: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 5px; font-weight: 500; }
@@ -42,8 +43,10 @@
         .btn-reset { background-color: #ffc107; color: #333; }
         .btn-clear { background-color: #e53935; color: white; }
         #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
-        #final-script-output { width: 100%; height: 300px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 0.9em; margin-top: 10px; background-color: #2d2d2d; color: #dcdcdc; padding: 15px; border-radius: 5px; }
         #status-message { margin-top: 15px; color: #218838; font-weight: bold; text-align: center; height: 20px; }
+        #script-list-container { display: flex; flex-direction: column; gap: 12px; }
+        .script-list-item { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 10px 15px; border-radius: 5px; border: 1px solid #e9ecef; }
+        .script-list-item strong { font-size: 1.1em; color: #333; }
     </style>
 </head>
 <body>
@@ -71,7 +74,7 @@
     <div class="grid-container">
         <div class="panel add-panel">
             <h2>Editor de Passos</h2>
-            <div id="building-controls-container"><p>Carregando...</p></div>
+            <div id="building-controls-container"><p>Aguardando autenticação...</p></div>
         </div>
 
         <div class="panel custom-order">
@@ -85,16 +88,10 @@
         </div>
 
         <div id="script-generation-panel" class="panel">
-            <h2>Gerar Script do Perfil Ativo</h2>
-            <div id="script-output-area">
-                <p>Nenhum perfil carregado. Salve um perfil para poder gerar o script.</p>
-                <button id="generate-script-btn" class="btn btn-save" disabled>Gerar Script</button>
-                <div id="copy-area" style="display: none; margin-top: 10px;">
-                    <p>Script para <strong id="generated-script-name"></strong> gerado com sucesso!</p>
-                    <button id="copy-script-btn" class="btn btn-reset">Copiar Script</button>
-                </div>
+            <h2>Copiar Script de um Perfil Salvo</h2>
+            <div id="script-list-container">
+                <p>Nenhum perfil salvo encontrado. Salve um perfil para poder copiar o script.</p>
             </div>
-            <textarea id="final-script-output" style="display: none;"></textarea>
         </div>
     </div>
 </div>
@@ -128,18 +125,13 @@
         const currentProfileNameEl = document.getElementById('current-profile-name');
         const saveBtn = document.getElementById('save-order-btn');
         const deleteBtn = document.getElementById('delete-order-btn');
-        const generateBtn = document.getElementById('generate-script-btn');
-        const copyBtn = document.getElementById('copy-script-btn');
-        const scriptOutputArea = document.getElementById('script-output-area');
-        const generatedScriptName = document.getElementById('generated-script-name');
-        const copyArea = document.getElementById('copy-area');
-        const finalScriptOutput = document.getElementById('final-script-output');
+        const scriptListContainer = document.getElementById('script-list-container');
         const statusMsg = document.getElementById('status-message');
         
         // --- FUNÇÕES DE API E LÓGICA DE PERFIS ---
         async function apiRequest(endpoint, method = 'GET', body = null) {
-            const idToken = await auth.currentUser?.getIdToken();
-            if (!idToken) throw new Error('Usuário não autenticado.');
+            if (!auth.currentUser) throw new Error('Usuário não autenticado.');
+            const idToken = await auth.currentUser.getIdToken();
             const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
             if (body) options.body = JSON.stringify(body);
             const response = await fetch(`/api/${endpoint}`, options);
@@ -174,7 +166,6 @@
                 deleteBtn.style.display = 'inline-block';
             }
             renderCustomOrder();
-            updateScriptGenerationUI();
         }
 
         async function handleSaveProfile() {
@@ -195,8 +186,8 @@
                     currentProfile = newProfileData;
                 }
                 populateProfileSelect();
+                renderScriptList();
                 showStatus('Perfil salvo com sucesso!', false);
-                updateScriptGenerationUI();
             } catch (error) { showStatus(`Erro ao salvar: ${error.message}`, true); }
         }
 
@@ -207,21 +198,47 @@
                 allProfiles = allProfiles.filter(p => p.id !== currentProfile.id);
                 loadProfile('new');
                 populateProfileSelect();
+                renderScriptList();
                 showStatus('Perfil deletado.', false);
             } catch(error) { showStatus(`Erro ao deletar: ${error.message}`, true); }
         }
 
-        function updateScriptGenerationUI() {
-            if (currentProfile) {
-                scriptOutputArea.querySelector('p').style.display = 'none';
-                generateBtn.disabled = false;
-                generateBtn.textContent = `Gerar Script para "${currentProfile.profileName}"`;
-            } else {
-                scriptOutputArea.querySelector('p').style.display = 'block';
-                generateBtn.disabled = true;
-                generateBtn.textContent = `Gerar Script`;
+        function renderScriptList() {
+            scriptListContainer.innerHTML = '';
+            if (allProfiles.length === 0) {
+                scriptListContainer.innerHTML = '<p>Nenhum perfil salvo encontrado.</p>';
+                return;
             }
-            copyArea.style.display = 'none';
+            allProfiles.forEach(profile => {
+                const item = document.createElement('div');
+                item.className = 'script-list-item';
+                item.innerHTML = `
+                    <strong>${profile.profileName}</strong>
+                    <button class="btn btn-save copy-script-btn" data-profile-id="${profile.id}">Copiar Script</button>
+                `;
+                scriptListContainer.appendChild(item);
+            });
+        }
+        
+        async function generateAndCopyScript(profile, buttonElement) {
+            const originalText = buttonElement.textContent;
+            buttonElement.textContent = 'Gerando...';
+            buttonElement.disabled = true;
+            try {
+                const baseScript = await (await fetch('/api/get-raw-script/upador')).text();
+                const newOrderString = profile.order.map(item => `        "main_buildlink_${item.building}_${item.level}"`).join(',\n');
+                const newFunctionString = `function getConstrucao_Edifcios_Serie() {\n    const Sequencia_Construcao = [\n${newOrderString}\n    ];\n\n    return Sequencia_Construcao;\n}`;
+                const regex = /function\s+getConstrucao_Edifcios_Serie\s*\(\)\s*\{[\s\S]*?\}/i;
+                if (!regex.test(baseScript)) throw new Error("Não foi possível encontrar a função de construção no script base.");
+                const finalScript = baseScript.replace(regex, newFunctionString);
+                await navigator.clipboard.writeText(finalScript);
+                showStatus(`Script para "${profile.profileName}" copiado com sucesso!`);
+            } catch (error) {
+                showStatus(`Erro ao gerar script: ${error.message}`, true);
+            } finally {
+                buttonElement.textContent = originalText;
+                buttonElement.disabled = false;
+            }
         }
 
         // --- FUNÇÕES DE UI E LÓGICA DE PASSOS ---
@@ -233,7 +250,7 @@
         const renderCustomOrder = () => {
             customList.innerHTML = '';
             if (currentBuildOrder.length === 0) {
-                customList.innerHTML = '<p>Sua ordem de construção está vazia.</p>';
+                customList.innerHTML = '<p>Ordem de construção vazia.</p>';
                 return;
             }
             currentBuildOrder.forEach((item, index) => {
@@ -268,12 +285,13 @@
                     try {
                         allProfiles = await apiRequest('build-orders');
                         populateProfileSelect();
+                        renderScriptList();
                         loadProfile('new');
                     } catch (error) {
                         showStatus(`Não foi possível carregar seus perfis: ${error.message}`, true);
                     }
                 } else {
-                    scriptOutputArea.innerHTML = '<p>Você precisa estar logado para gerenciar seus perfis.</p>'
+                    document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
                 }
             });
         }
@@ -315,38 +333,14 @@
             }
         });
 
-        generateBtn.addEventListener('click', async () => {
-            if (!currentProfile) {
-                alert("Por favor, selecione e salve um perfil antes de gerar o script.");
-                return;
+        scriptListContainer.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('copy-script-btn')) {
+                const profileId = e.target.dataset.profileId;
+                const profileToCopy = allProfiles.find(p => p.id === profileId);
+                if (profileToCopy) {
+                    await generateAndCopyScript(profileToCopy, e.target);
+                }
             }
-            generateBtn.textContent = 'Gerando...';
-            generateBtn.disabled = true;
-            try {
-                const response = await fetch('/api/get-raw-script/upador');
-                const baseScript = await response.text();
-                const newOrderString = currentBuildOrder.map(item => `        "main_buildlink_${item.building}_${item.level}"`).join(',\n');
-                const newFunctionString = `function getConstrucao_Edifcios_Serie() {\n    const Sequencia_Construcao = [\n${newOrderString}\n    ];\n\n    return Sequencia_Construcao;\n}`;
-                const regex = /function\s+getConstrucao_Edifcios_Serie\s*\(\)\s*\{[\s\S]*?\}/i;
-                if (!regex.test(baseScript)) throw new Error("Não foi possível encontrar a função 'getConstrucao_Edifcios_Serie()' no script.");
-                const finalScript = baseScript.replace(regex, newFunctionString);
-                finalScriptOutput.value = finalScript;
-                
-                generatedScriptName.textContent = currentProfile.profileName;
-                copyArea.style.display = 'block';
-                showStatus('Script gerado com sucesso!', false);
-            } catch (error) {
-                showStatus(`Erro ao gerar script: ${error.message}`, true);
-            } finally {
-                generateBtn.textContent = `Gerar Script para "${currentProfile.profileName}"`;
-                generateBtn.disabled = false;
-            }
-        });
-
-        copyBtn.addEventListener('click', () => {
-            finalScriptOutput.select();
-            document.execCommand('copy');
-            showStatus('Script copiado para a área de transferência!');
         });
         
         initialize();

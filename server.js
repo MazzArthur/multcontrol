@@ -221,6 +221,11 @@ app.post('/alert', async (req, res) => {
     }
 });
 
+app.get('/personalizar', (req, res) => {
+    const firebaseConfig = getFirebaseClientConfig();
+    // Renderiza o novo arquivo 'personalizar.ejs'
+    res.render('personalizar', { firebaseConfig: firebaseConfig });
+});
 
 // REMOVEMOS A ROTA app.get('/alerts') pois o frontend buscará diretamente do Firestore agora.
 

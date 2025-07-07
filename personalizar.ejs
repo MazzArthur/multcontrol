@@ -20,21 +20,22 @@
         .panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
         
-        /* Edifícios Disponíveis */
-        .available-buildings .building-btn {
-            background-color: #e0e0e0; color: #333; border: none; border-radius: 5px; padding: 8px 12px; margin: 4px; cursor: pointer; transition: background-color 0.2s; font-size: 0.9em;
-        }
-        .available-buildings .building-btn:hover { background-color: #c7c7c7; }
+        /* Painel de Adicionar */
+        .add-panel-controls { display: flex; gap: 10px; align-items: center; }
+        .add-panel-controls select, .add-panel-controls input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1em; }
+        .add-panel-controls input[type="number"] { width: 60px; }
+        .btn { border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold; transition: background-color 0.3s; }
+        .btn-add { background-color: #3498db; color: white; }
+        .btn-add:hover { background-color: #2980b9; }
 
         /* Ordem Customizada */
-        #custom-order-list { min-height: 100px; border: 1px dashed #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; }
+        #custom-order-list { min-height: 200px; max-height: 400px; overflow-y: auto; border: 1px dashed #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; }
         .order-item { display: flex; justify-content: space-between; align-items: center; background-color: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 5px; font-weight: 500; }
         .delete-btn { background: #e57373; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 22px; text-align: center; }
         .delete-btn:hover { background: #d32f2f; }
 
         /* Botões de Ação */
         .action-buttons { margin-top: 20px; display: flex; gap: 10px; }
-        .btn { border: none; border-radius: 5px; padding: 12px 25px; cursor: pointer; font-size: 1.1em; font-weight: bold; transition: background-color 0.3s; }
         .btn-save { background-color: #28a745; color: white; }
         .btn-save:hover { background-color: #218838; }
         .btn-reset { background-color: #ffc107; color: #333; }
@@ -42,7 +43,7 @@
 
         /* Geração de Script */
         #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
-        #final-script-output { width: 100%; height: 300px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 0.9em; margin-top: 10px; readonly; background-color: #2d2d2d; color: #dcdcdc; padding: 15px; border-radius: 5px; }
+        #final-script-output { width: 100%; height: 300px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 0.9em; margin-top: 10px; background-color: #2d2d2d; color: #dcdcdc; padding: 15px; border-radius: 5px; }
         #status-message { margin-top: 15px; color: #218838; font-weight: bold; text-align: center; height: 20px; }
     </style>
 </head>
@@ -59,14 +60,18 @@
     <h1>Ferramenta de Personalização do Script Upador</h1>
     
     <div class="grid-container">
-        <div class="panel available-buildings">
-            <h2>Edifícios Disponíveis</h2>
-            <div id="available-buildings-list"></div>
+        <div class="panel add-panel">
+            <h2>Adicionar à Ordem</h2>
+            <div class="add-panel-controls">
+                <select id="building-select"></select>
+                <input type="number" id="level-input" value="1" min="1" max="30">
+                <button id="add-btn" class="btn btn-add">Adicionar</button>
+            </div>
         </div>
 
         <div class="panel custom-order">
             <h2>Sua Ordem de Construção</h2>
-            <p style="font-size: 0.9em; color: #666;">Clique nos edifícios à esquerda para adicioná-los aqui.</p>
+            <p style="font-size: 0.9em; color: #666;">Adicione edifícios e níveis para montar sua sequência.</p>
             <div id="custom-order-list"></div>
             <div class="action-buttons">
                 <button id="save-order-btn" class="btn btn-save">Salvar Ordem</button>
@@ -77,7 +82,7 @@
 
         <div id="script-generation-panel" class="panel">
             <h2>Gerar e Copiar seu Script</h2>
-            <p style="font-size: 0.9em; color: #666;">Após salvar sua ordem, clique aqui para gerar o script final com suas modificações injetadas.</p>
+            <p style="font-size: 0.9em; color: #666;">Após salvar sua ordem, clique para gerar o script final com suas modificações.</p>
             <div class="action-buttons">
                  <button id="generate-script-btn" class="btn btn-save">Gerar Script</button>
                  <button id="copy-script-btn" class="btn btn-reset" style="display: none;">Copiar Script</button>
@@ -90,11 +95,16 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- CONFIGURAÇÕES ---
-        const ALL_BUILDINGS = ['main', 'barracks', 'stable', 'garage', 'smith', 'place', 'statue', 'market', 'wood', 'stone', 'iron', 'farm', 'storage', 'hide', 'wall'];
-        const DEFAULT_BUILD_ORDER = ['main', 'farm', 'storage', 'barracks', 'wall'];
+        const ALL_BUILDINGS = ['main', 'barracks', 'stable', 'garage', 'smith', 'place', 'statue', 'market', 'wood', 'stone', 'iron', 'farm', 'storage', 'hide', 'wall', 'snob', 'academy', 'watchtower', 'hospital', 'church', 'trade'];
+        const DEFAULT_BUILD_ORDER = [
+            { building: 'wood', level: 1 }, { building: 'stone', level: 1 }, { building: 'iron', level: 1 },
+            { building: 'main', level: 2 }, { building: 'main', level: 3 }, { building: 'barracks', level: 1 }
+        ];
 
         // --- ELEMENTOS DA DOM ---
-        const availableList = document.getElementById('available-buildings-list');
+        const buildingSelect = document.getElementById('building-select');
+        const levelInput = document.getElementById('level-input');
+        const addBtn = document.getElementById('add-btn');
         const customList = document.getElementById('custom-order-list');
         const saveBtn = document.getElementById('save-order-btn');
         const resetBtn = document.getElementById('reset-order-btn');
@@ -109,41 +119,41 @@
         const showStatus = (message, isError = false) => {
             statusMsg.textContent = message;
             statusMsg.style.color = isError ? '#d32f2f' : '#218838';
-            setTimeout(() => statusMsg.textContent = '', 3000);
+            setTimeout(() => statusMsg.textContent = '', 4000);
         };
 
         const renderCustomOrder = () => {
             customList.innerHTML = '';
-            currentBuildOrder.forEach((building, index) => {
-                const item = document.createElement('div');
-                item.className = 'order-item';
-                item.innerHTML = `<span>${index + 1}. ${building}</span><button class="delete-btn" data-index="${index}">×</button>`;
-                customList.appendChild(item);
+            currentBuildOrder.forEach((item, index) => {
+                const el = document.createElement('div');
+                el.className = 'order-item';
+                el.innerHTML = `<span>${index + 1}. <strong>${item.building}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`;
+                customList.appendChild(el);
             });
         };
 
-        const renderAvailableBuildings = () => {
-            availableList.innerHTML = '';
-            ALL_BUILDINGS.forEach(building => {
-                const btn = document.createElement('button');
-                btn.className = 'building-btn';
-                btn.textContent = building;
-                btn.dataset.building = building;
-                availableList.appendChild(btn);
+        const populateBuildingSelect = () => {
+            ALL_BUILDINGS.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b;
+                option.textContent = b;
+                buildingSelect.appendChild(option);
             });
         };
 
         const initialize = () => {
             const savedOrder = localStorage.getItem('customBuildOrder');
             currentBuildOrder = savedOrder ? JSON.parse(savedOrder) : [...DEFAULT_BUILD_ORDER];
-            renderAvailableBuildings();
+            populateBuildingSelect();
             renderCustomOrder();
         };
 
         // --- EVENT LISTENERS ---
-        availableList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('building-btn')) {
-                currentBuildOrder.push(e.target.dataset.building);
+        addBtn.addEventListener('click', () => {
+            const building = buildingSelect.value;
+            const level = parseInt(levelInput.value, 10);
+            if (level > 0) {
+                currentBuildOrder.push({ building, level });
                 renderCustomOrder();
             }
         });
@@ -177,28 +187,26 @@
             copyBtn.style.display = 'none';
 
             try {
-                // 1. Buscar o script bruto do servidor
                 const response = await fetch('/api/get-raw-script/upador');
-                if (!response.ok) throw new Error(`Não foi possível buscar o script do servidor (Status: ${response.status})`);
+                if (!response.ok) throw new Error(`Não foi possível buscar o script (Status: ${response.status})`);
                 const baseScript = await response.text();
 
-                // 2. Preparar a nova ordem para injeção
-                // Formata o array ['main', 'farm'] para a string "main","farm"
-                const newOrderStringForInjection = currentBuildOrder.map(b => `"${b}"`).join(','); 
+                // Transforma a ordem [{b:'wood', l:1}] para "main_buildlink_wood_1"
+                const newOrderString = currentBuildOrder.map(item => {
+                    return `        "main_buildlink_${item.building}_${item.level}"`;
+                }).join(',\n');
                 
-                // 3. Criar a nova linha completa da variável
-                // IMPORTANTE: O nome da variável aqui DEVE ser o mesmo do seu arquivo de script!
-                const newVariableLine = `const Construcao_Edificios_Ordem = [${newOrderStringForInjection}];`;
+                // Cria a nova função completa com a nova ordem
+                const newFunctionString = `function getConstrucao_Edifcios_Serie() {\n    const Sequencia_Construcao = [\n${newOrderString}\n    ];\n\n    return Sequencia_Construcao;\n}`;
+                
+                // Regex para encontrar a função inteira, desde "function" até o "}" final
+                const functionRegex = /function\s+getConstrucao_Edifcios_Serie\s*\(\)\s*\{[\s\S]*?\}/i;
 
-                // 4. Usar Regex para substituir a linha antiga pela nova
-                // Este Regex procura por 'const' ou 'let' seguido pelo nome da variável e um array [...]
-                const variableRegex = /(?:const|let)\s+Construcao_Edificios_Ordem\s*=\s*\[[^\]]*\];/i;
-
-                if (!variableRegex.test(baseScript)) {
-                    throw new Error("Não foi possível encontrar a variável 'Construcao_Edificios_Ordem' no script original. Verifique o nome da variável no arquivo upador_script_content.js");
+                if (!functionRegex.test(baseScript)) {
+                    throw new Error("Não foi possível encontrar a função 'getConstrucao_Edifcios_Serie()' no script original. Verifique o nome da função.");
                 }
                 
-                const finalScript = baseScript.replace(variableRegex, newVariableLine);
+                const finalScript = baseScript.replace(functionRegex, newFunctionString);
                 
                 finalScriptOutput.value = finalScript;
                 copyBtn.style.display = 'inline-block';

@@ -107,6 +107,7 @@ const FIREBASE_AUTH_ID_TOKEN = ""; // Este valor sera ignorado. O script obterá
 
 //*************************** /CONFIGURACAO ***************************//
 
+
 // Constantes (NAO DEVE SER ALTERADAS)
 const Visualizacao_Geral = "OVERVIEW_VIEW";
 const Edificio_Principal = "HEADQUARTERS_VIEW";

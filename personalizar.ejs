@@ -40,7 +40,6 @@
         .delete-btn { background: #e57373; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 22px; text-align: center; }
         .action-buttons { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
         .btn-save { background-color: #28a745; color: white; }
-        .btn-reset { background-color: #ffc107; color: #333; }
         .btn-clear { background-color: #e53935; color: white; }
         #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
         #status-message { margin-top: 15px; color: #218838; font-weight: bold; text-align: center; height: 20px; }
@@ -97,14 +96,12 @@
 </div>
 
 <script>
-    // Inicializa o Firebase com a configuração passada pelo servidor
     const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- CONFIGURAÇÕES E ESTADO ---
         const BUILDING_INFO = {
             'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' },
             'garage': { name: 'Oficina', icon: '⚙️' }, 'smith': { name: 'Ferreiro', icon: '🛠️' }, 'place': { name: 'Praça de Reunião', icon: '🚩' },
@@ -118,7 +115,6 @@
         let currentProfile = null;
         let currentBuildOrder = [];
 
-        // --- ELEMENTOS DA DOM ---
         const profileSelect = document.getElementById('profile-select');
         const controlsContainer = document.getElementById('building-controls-container');
         const customList = document.getElementById('custom-order-list');
@@ -128,7 +124,6 @@
         const scriptListContainer = document.getElementById('script-list-container');
         const statusMsg = document.getElementById('status-message');
         
-        // --- FUNÇÕES DE API E LÓGICA DE PERFIS ---
         async function apiRequest(endpoint, method = 'GET', body = null) {
             if (!auth.currentUser) throw new Error('Usuário não autenticado.');
             const idToken = await auth.currentUser.getIdToken();
@@ -139,7 +134,8 @@
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Falha na requisição à API.');
             }
-            return response.status !== 204 ? await response.json() : null;
+            if (response.headers.get("content-type")?.includes("application/json")) return await response.json();
+            return await response.text();
         }
 
         function populateProfileSelect() {
@@ -212,10 +208,7 @@
             allProfiles.forEach(profile => {
                 const item = document.createElement('div');
                 item.className = 'script-list-item';
-                item.innerHTML = `
-                    <strong>${profile.profileName}</strong>
-                    <button class="btn btn-save copy-script-btn" data-profile-id="${profile.id}">Copiar Script</button>
-                `;
+                item.innerHTML = `<strong>${profile.profileName}</strong><button class="btn btn-save copy-script-btn" data-profile-id="${profile.id}">Copiar Script</button>`;
                 scriptListContainer.appendChild(item);
             });
         }
@@ -225,12 +218,7 @@
             buttonElement.textContent = 'Gerando...';
             buttonElement.disabled = true;
             try {
-                const baseScript = await (await fetch('/api/get-raw-script/upador')).text();
-                const newOrderString = profile.order.map(item => `        "main_buildlink_${item.building}_${item.level}"`).join(',\n');
-                const newFunctionString = `function getConstrucao_Edifcios_Serie() {\n    const Sequencia_Construcao = [\n${newOrderString}\n    ];\n\n    return Sequencia_Construcao;\n}`;
-                const regex = /function\s+getConstrucao_Edifcios_Serie\s*\(\)\s*\{[\s\S]*?\}/i;
-                if (!regex.test(baseScript)) throw new Error("Não foi possível encontrar a função de construção no script base.");
-                const finalScript = baseScript.replace(regex, newFunctionString);
+                const finalScript = await apiRequest('generate-custom-script', 'POST', { order: profile.order });
                 await navigator.clipboard.writeText(finalScript);
                 showStatus(`Script para "${profile.profileName}" copiado com sucesso!`);
             } catch (error) {
@@ -241,7 +229,6 @@
             }
         }
 
-        // --- FUNÇÕES DE UI E LÓGICA DE PASSOS ---
         const showStatus = (message, isError = false) => {
              statusMsg.textContent = message;
              statusMsg.style.color = isError ? '#e53935' : '#28a745';
@@ -267,13 +254,7 @@
                 const info = BUILDING_INFO[buildingKey];
                 const controlRow = document.createElement('div');
                 controlRow.className = 'building-control-row';
-                controlRow.innerHTML = `
-                    <span class="building-name">${info.icon} ${info.name}</span>
-                    <div class="building-inputs">
-                        <input type="number" value="1" min="1" max="30" class="quantity-input" data-building="${buildingKey}">
-                        <button class="btn btn-add" data-building="${buildingKey}">Adicionar</button>
-                    </div>
-                `;
+                controlRow.innerHTML = `<span class="building-name">${info.icon} ${info.name}</span><div class="building-inputs"><input type="number" value="1" min="1" max="30" class="quantity-input" data-building="${buildingKey}"><button class="btn btn-add" data-building="${buildingKey}">Adicionar</button></div>`;
                 controlsContainer.appendChild(controlRow);
             });
         };
@@ -296,7 +277,6 @@
             });
         }
 
-        // --- EVENT LISTENERS ---
         profileSelect.addEventListener('change', (e) => loadProfile(e.target.value));
         saveBtn.addEventListener('click', handleSaveProfile);
         deleteBtn.addEventListener('click', handleDeleteProfile);

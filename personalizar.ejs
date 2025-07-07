@@ -3,23 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personalizar - MULTCONTROL</title>
+    <title>Personalizar Script - MULTCONTROL</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; }
         .navbar { background-color: #2c3e50; width: 100%; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .navbar-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: flex-start; }
-        .navbar a { float: left; color: white; text-align: center; padding: 14px 20px; text-decoration: none; font-size: 17px; font-weight: bold; transition: background-color 0.3s, color 0.3s; }
-        .navbar a:hover { background-color: #3498db; color: white; }
-        .navbar a.active { background-color: #2980b9; color: white; }
-        .container { padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 800px; box-sizing: border-box; }
-        h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        label { font-weight: bold; display: block; margin-top: 20px; margin-bottom: 8px; color: #34495e; }
-        textarea { width: 100%; height: 150px; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 1em; font-family: 'Consolas', monospace; margin-bottom: 15px; }
-        button { background-color: #28a745; color: white; padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 1.1em; font-weight: bold; transition: background-color 0.3s ease; }
-        button:hover { background-color: #218838; }
+        .navbar a { float: left; color: white; text-align: center; padding: 14px 20px; text-decoration: none; font-size: 17px; font-weight: bold; transition: background-color 0.3s; }
+        .navbar a:hover { background-color: #3498db; }
+        .navbar a.active { background-color: #2980b9; }
+        
+        .main-container { padding: 20px; width: 100%; max-width: 1100px; box-sizing: border-box; }
+        .grid-container { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
+        .panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        
+        /* Edifícios Disponíveis */
+        .available-buildings .building-btn {
+            background-color: #e0e0e0; color: #333; border: none; border-radius: 5px; padding: 8px 12px; margin: 4px; cursor: pointer; transition: background-color 0.2s; font-size: 0.9em;
+        }
+        .available-buildings .building-btn:hover { background-color: #c7c7c7; }
+
+        /* Ordem Customizada */
+        #custom-order-list { min-height: 100px; border: 1px dashed #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; }
+        .order-item { display: flex; justify-content: space-between; align-items: center; background-color: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 5px; font-weight: 500; }
+        .delete-btn { background: #e57373; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 22px; text-align: center; }
+        .delete-btn:hover { background: #d32f2f; }
+
+        /* Botões de Ação */
+        .action-buttons { margin-top: 20px; display: flex; gap: 10px; }
+        .btn { border: none; border-radius: 5px; padding: 12px 25px; cursor: pointer; font-size: 1.1em; font-weight: bold; transition: background-color 0.3s; }
+        .btn-save { background-color: #28a745; color: white; }
+        .btn-save:hover { background-color: #218838; }
+        .btn-reset { background-color: #ffc107; color: #333; }
+        .btn-reset:hover { background-color: #e0a800; }
+
+        /* Geração de Script */
+        #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
+        #final-script-output { width: 100%; height: 300px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 0.9em; margin-top: 10px; readonly; background-color: #2d2d2d; color: #dcdcdc; padding: 15px; border-radius: 5px; }
         #status-message { margin-top: 15px; color: #218838; font-weight: bold; text-align: center; height: 20px; }
     </style>
 </head>
@@ -32,47 +55,172 @@
     </div>
 </nav>
 
-<div class="container">
-    <h1>Personalizar Script Upador</h1>
-    <p>As configurações salvas aqui serão usadas pelo seu script no jogo.</p>
+<div class="main-container">
+    <h1>Ferramenta de Personalização do Script Upador</h1>
+    
+    <div class="grid-container">
+        <div class="panel available-buildings">
+            <h2>Edifícios Disponíveis</h2>
+            <div id="available-buildings-list"></div>
+        </div>
 
-    <label for="build-order">Ordem de Construção:</label>
-    <p style="font-size: 0.9em; color: #666;">Insira os nomes dos edifícios separados por vírgula. Ex: <code>main,barracks,stable,farm</code></p>
-    <textarea id="build-order" placeholder="Ex: main,farm,barracks,stable,smith,wall..."></textarea>
+        <div class="panel custom-order">
+            <h2>Sua Ordem de Construção</h2>
+            <p style="font-size: 0.9em; color: #666;">Clique nos edifícios à esquerda para adicioná-los aqui.</p>
+            <div id="custom-order-list"></div>
+            <div class="action-buttons">
+                <button id="save-order-btn" class="btn btn-save">Salvar Ordem</button>
+                <button id="reset-order-btn" class="btn btn-reset">Usar Ordem Padrão</button>
+            </div>
+            <div id="status-message"></div>
+        </div>
 
-    <button id="save-button">Salvar Configurações</button>
-    <div id="status-message"></div>
+        <div id="script-generation-panel" class="panel">
+            <h2>Gerar e Copiar seu Script</h2>
+            <p style="font-size: 0.9em; color: #666;">Após salvar sua ordem, clique aqui para gerar o script final com suas modificações injetadas.</p>
+            <div class="action-buttons">
+                 <button id="generate-script-btn" class="btn btn-save">Gerar Script</button>
+                 <button id="copy-script-btn" class="btn btn-reset" style="display: none;">Copiar Script</button>
+            </div>
+            <textarea id="final-script-output" readonly placeholder="Seu script personalizado aparecerá aqui..."></textarea>
+        </div>
+    </div>
 </div>
 
 <script>
-    const buildOrderTextarea = document.getElementById('build-order');
-    const saveButton = document.getElementById('save-button');
-    const statusMessage = document.getElementById('status-message');
-
-    // Ao carregar a página, busca a ordem salva no localStorage
     document.addEventListener('DOMContentLoaded', () => {
-        const savedOrder = localStorage.getItem('buildOrder');
-        if (savedOrder) {
-            buildOrderTextarea.value = savedOrder;
-        }
-    });
+        // --- CONFIGURAÇÕES ---
+        const ALL_BUILDINGS = ['main', 'barracks', 'stable', 'garage', 'smith', 'place', 'statue', 'market', 'wood', 'stone', 'iron', 'farm', 'storage', 'hide', 'wall'];
+        const DEFAULT_BUILD_ORDER = ['main', 'farm', 'storage', 'barracks', 'wall'];
 
-    // Evento do botão para salvar
-    saveButton.addEventListener('click', () => {
-        const newOrder = buildOrderTextarea.value.trim();
+        // --- ELEMENTOS DA DOM ---
+        const availableList = document.getElementById('available-buildings-list');
+        const customList = document.getElementById('custom-order-list');
+        const saveBtn = document.getElementById('save-order-btn');
+        const resetBtn = document.getElementById('reset-order-btn');
+        const generateBtn = document.getElementById('generate-script-btn');
+        const copyBtn = document.getElementById('copy-script-btn');
+        const finalScriptOutput = document.getElementById('final-script-output');
+        const statusMsg = document.getElementById('status-message');
 
-        if (newOrder) {
-            localStorage.setItem('buildOrder', newOrder);
-            statusMessage.textContent = 'Ordem de construção salva com sucesso!';
-        } else {
-            localStorage.removeItem('buildOrder');
-            statusMessage.textContent = 'Configuração removida. O script usará a ordem padrão.';
-        }
-        
-        // Limpa a mensagem após 3 segundos
-        setTimeout(() => {
-            statusMessage.textContent = '';
-        }, 3000);
+        let currentBuildOrder = [];
+
+        // --- FUNÇÕES ---
+        const showStatus = (message, isError = false) => {
+            statusMsg.textContent = message;
+            statusMsg.style.color = isError ? '#d32f2f' : '#218838';
+            setTimeout(() => statusMsg.textContent = '', 3000);
+        };
+
+        const renderCustomOrder = () => {
+            customList.innerHTML = '';
+            currentBuildOrder.forEach((building, index) => {
+                const item = document.createElement('div');
+                item.className = 'order-item';
+                item.innerHTML = `<span>${index + 1}. ${building}</span><button class="delete-btn" data-index="${index}">×</button>`;
+                customList.appendChild(item);
+            });
+        };
+
+        const renderAvailableBuildings = () => {
+            availableList.innerHTML = '';
+            ALL_BUILDINGS.forEach(building => {
+                const btn = document.createElement('button');
+                btn.className = 'building-btn';
+                btn.textContent = building;
+                btn.dataset.building = building;
+                availableList.appendChild(btn);
+            });
+        };
+
+        const initialize = () => {
+            const savedOrder = localStorage.getItem('customBuildOrder');
+            currentBuildOrder = savedOrder ? JSON.parse(savedOrder) : [...DEFAULT_BUILD_ORDER];
+            renderAvailableBuildings();
+            renderCustomOrder();
+        };
+
+        // --- EVENT LISTENERS ---
+        availableList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('building-btn')) {
+                currentBuildOrder.push(e.target.dataset.building);
+                renderCustomOrder();
+            }
+        });
+
+        customList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const indexToRemove = parseInt(e.target.dataset.index, 10);
+                currentBuildOrder.splice(indexToRemove, 1);
+                renderCustomOrder();
+            }
+        });
+
+        saveBtn.addEventListener('click', () => {
+            localStorage.setItem('customBuildOrder', JSON.stringify(currentBuildOrder));
+            showStatus('Ordem personalizada salva com sucesso!');
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Tem certeza que deseja reverter para a ordem padrão?')) {
+                currentBuildOrder = [...DEFAULT_BUILD_ORDER];
+                renderCustomOrder();
+                localStorage.setItem('customBuildOrder', JSON.stringify(currentBuildOrder));
+                showStatus('Ordem revertida para o padrão e salva.');
+            }
+        });
+
+        generateBtn.addEventListener('click', async () => {
+            generateBtn.textContent = 'Gerando...';
+            generateBtn.disabled = true;
+            finalScriptOutput.value = '';
+            copyBtn.style.display = 'none';
+
+            try {
+                // 1. Buscar o script bruto do servidor
+                const response = await fetch('/api/get-raw-script/upador');
+                if (!response.ok) throw new Error(`Não foi possível buscar o script do servidor (Status: ${response.status})`);
+                const baseScript = await response.text();
+
+                // 2. Preparar a nova ordem para injeção
+                // Formata o array ['main', 'farm'] para a string "main","farm"
+                const newOrderStringForInjection = currentBuildOrder.map(b => `"${b}"`).join(','); 
+                
+                // 3. Criar a nova linha completa da variável
+                // IMPORTANTE: O nome da variável aqui DEVE ser o mesmo do seu arquivo de script!
+                const newVariableLine = `const Construcao_Edificios_Ordem = [${newOrderStringForInjection}];`;
+
+                // 4. Usar Regex para substituir a linha antiga pela nova
+                // Este Regex procura por 'const' ou 'let' seguido pelo nome da variável e um array [...]
+                const variableRegex = /(?:const|let)\s+Construcao_Edificios_Ordem\s*=\s*\[[^\]]*\];/i;
+
+                if (!variableRegex.test(baseScript)) {
+                    throw new Error("Não foi possível encontrar a variável 'Construcao_Edificios_Ordem' no script original. Verifique o nome da variável no arquivo upador_script_content.js");
+                }
+                
+                const finalScript = baseScript.replace(variableRegex, newVariableLine);
+                
+                finalScriptOutput.value = finalScript;
+                copyBtn.style.display = 'inline-block';
+                showStatus('Script gerado com sucesso!');
+
+            } catch (error) {
+                showStatus(`Erro: ${error.message}`, true);
+                finalScriptOutput.value = `Ocorreu um erro ao gerar o script:\n\n${error.message}`;
+            } finally {
+                generateBtn.textContent = 'Gerar Script';
+                generateBtn.disabled = false;
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            finalScriptOutput.select();
+            document.execCommand('copy');
+            showStatus('Script copiado para a área de transferência!');
+        });
+
+        // --- INICIALIZAÇÃO DA PÁGINA ---
+        initialize();
     });
 </script>
 

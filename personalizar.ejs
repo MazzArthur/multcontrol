@@ -24,9 +24,9 @@
         .panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
         .profile-manager { grid-column: 1 / -1; margin-bottom: 20px; }
-        .profile-manager .control-group { display:flex; flex-direction:column; }
-        .profile-manager label { margin-bottom: 5px; font-weight: 500; }
         .profile-manager select { width: 100%; padding: 10px; font-size: 1.1em; }
+        .btn-import { background-color: #546e7a; color: white; margin-left:10px; }
+        .btn-import:hover { background-color: #455a64; }
         #building-controls-container { display: flex; flex-direction: column; gap: 12px; }
         .building-control-row { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 8px; border-radius: 5px; border: 1px solid #e9ecef; }
         .building-name { font-weight: 500; flex-basis: 50%; }
@@ -46,6 +46,11 @@
         #script-list-container { display: flex; flex-direction: column; gap: 12px; }
         .script-list-item { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 10px 15px; border-radius: 5px; border: 1px solid #e9ecef; }
         .script-list-item strong { font-size: 1.1em; color: #333; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-content h2 { margin-top: 0; }
+        .modal-content textarea { width: 100%; height: 200px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 0.9em; margin-top: 10px; background-color: #f4f4f4; color: #333; padding: 10px; border-radius: 5px; }
+        .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
     </style>
 </head>
 <body>
@@ -62,11 +67,11 @@
     
     <div class="panel profile-manager">
         <h2>Meus Perfis de Construção</h2>
-        <div class="control-group">
-            <label for="profile-select">Carregar um perfil existente ou criar um novo:</label>
-            <select id="profile-select">
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="profile-select" style="flex-grow: 1;">
                 <option value="new">--- Criar Nova Ordem de Construção ---</option>
             </select>
+            <button id="import-game-btn" class="btn btn-import">Importar do Jogo</button>
         </div>
     </div>
 
@@ -95,6 +100,18 @@
     </div>
 </div>
 
+<div id="import-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2>Importar Ordem do Gerente de Contas</h2>
+        <p>Copie o código de exportação do seu Gerente de Contas do Tribal Wars e cole no campo abaixo.</p>
+        <textarea id="import-textarea" placeholder="Cole o código aqui..."></textarea>
+        <div class="modal-actions">
+            <button id="process-import-btn" class="btn btn-save">Importar</button>
+            <button id="close-import-modal-btn" class="btn btn-clear">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
     firebase.initializeApp(firebaseConfig);
@@ -102,6 +119,8 @@
     const db = firebase.firestore();
 
     document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIGURAÇÕES E ESTADO ---
+        const ID_TO_NAME = { 0: 'main', 1: 'barracks', 2: 'stable', 3: 'garage', 4: 'smith', 5: 'place', 6: 'statue', 7: 'market', 8: 'wood', 9: 'stone', 10: 'iron', 11: 'farm', 12: 'storage', 13: 'hide', 14: 'wall', 15: 'snob', 16: 'academy', 18: 'watchtower' };
         const BUILDING_INFO = {
             'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' },
             'garage': { name: 'Oficina', icon: '⚙️' }, 'smith': { name: 'Ferreiro', icon: '🛠️' }, 'place': { name: 'Praça de Reunião', icon: '🚩' },
@@ -115,6 +134,7 @@
         let currentProfile = null;
         let currentBuildOrder = [];
 
+        // --- ELEMENTOS DA DOM ---
         const profileSelect = document.getElementById('profile-select');
         const controlsContainer = document.getElementById('building-controls-container');
         const customList = document.getElementById('custom-order-list');
@@ -123,20 +143,33 @@
         const deleteBtn = document.getElementById('delete-order-btn');
         const scriptListContainer = document.getElementById('script-list-container');
         const statusMsg = document.getElementById('status-message');
+        const importGameBtn = document.getElementById('import-game-btn');
+        const importModal = document.getElementById('import-modal');
+        const importTextarea = document.getElementById('import-textarea');
+        const processImportBtn = document.getElementById('process-import-btn');
+        const closeImportModalBtn = document.getElementById('close-import-modal-btn');
         
+        // --- FUNÇÕES ---
         async function apiRequest(endpoint, method = 'GET', body = null) {
             if (!auth.currentUser) throw new Error('Usuário não autenticado.');
             const idToken = await auth.currentUser.getIdToken();
             const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
             if (body) options.body = JSON.stringify(body);
             const response = await fetch(`/api/${endpoint}`, options);
+            const contentType = response.headers.get("content-type");
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Falha na requisição à API.');
             }
-            if (response.headers.get("content-type")?.includes("application/json")) return await response.json();
+            if (contentType?.includes("application/json")) return await response.json();
             return await response.text();
         }
+
+        const showStatus = (message, isError = false) => {
+             statusMsg.textContent = message;
+             statusMsg.style.color = isError ? '#e53935' : '#28a745';
+             setTimeout(() => statusMsg.textContent = '', 4000);
+        };
 
         function populateProfileSelect() {
             profileSelect.innerHTML = '<option value="new">--- Criar Nova Ordem de Construção ---</option>';
@@ -228,12 +261,7 @@
                 buttonElement.disabled = false;
             }
         }
-
-        const showStatus = (message, isError = false) => {
-             statusMsg.textContent = message;
-             statusMsg.style.color = isError ? '#e53935' : '#28a745';
-             setTimeout(() => statusMsg.textContent = '', 4000);
-        };
+        
         const renderCustomOrder = () => {
             customList.innerHTML = '';
             if (currentBuildOrder.length === 0) {
@@ -248,6 +276,7 @@
                 customList.appendChild(el);
             });
         };
+
         const populateBuildingControls = () => {
             controlsContainer.innerHTML = '';
             Object.keys(BUILDING_INFO).forEach(buildingKey => {
@@ -259,6 +288,25 @@
             });
         };
         
+        function parseGameExportCode(code) {
+            try {
+                const decodedString = atob(code.trim());
+                const buildOrder = [];
+                for (let i = 0; i < decodedString.length; i += 2) {
+                    const buildingId = decodedString.charCodeAt(i);
+                    const level = decodedString.charCodeAt(i + 1);
+                    const buildingName = ID_TO_NAME[buildingId];
+                    if (buildingName && level > 0) {
+                        buildOrder.push({ building: buildingName, level: level });
+                    }
+                }
+                return buildOrder;
+            } catch (e) {
+                console.error("Erro ao decodificar o código:", e);
+                throw new Error("O código fornecido é inválido ou está em um formato irreconhecível.");
+            }
+        }
+
         async function initialize() {
             auth.onAuthStateChanged(async (user) => {
                 if (user) {
@@ -277,6 +325,7 @@
             });
         }
 
+        // --- EVENT LISTENERS ---
         profileSelect.addEventListener('change', (e) => loadProfile(e.target.value));
         saveBtn.addEventListener('click', handleSaveProfile);
         deleteBtn.addEventListener('click', handleDeleteProfile);
@@ -321,6 +370,32 @@
                     await generateAndCopyScript(profileToCopy, e.target);
                 }
             }
+        });
+
+        importGameBtn.addEventListener('click', () => {
+            importTextarea.value = '';
+            importModal.style.display = 'flex';
+        });
+
+        closeImportModalBtn.addEventListener('click', () => {
+            importModal.style.display = 'none';
+        });
+
+        processImportBtn.addEventListener('click', () => {
+            const code = importTextarea.value;
+            if (!code) { alert('Por favor, cole um código para importar.'); return; }
+            try {
+                const newOrder = parseGameExportCode(code);
+                if (newOrder.length === 0) throw new Error("Nenhuma ordem de construção válida foi encontrada no código.");
+                currentProfile = null;
+                currentBuildOrder = newOrder;
+                renderCustomOrder();
+                currentProfileNameEl.textContent = "Nova Ordem (Importada)";
+                profileSelect.value = 'new';
+                deleteBtn.style.display = 'none';
+                importModal.style.display = 'none';
+                showStatus('Ordem importada com sucesso! Clique em "Salvar Ordem" para criar um novo perfil.');
+            } catch (error) { alert(`Erro na importação: ${error.message}`); }
         });
         
         initialize();

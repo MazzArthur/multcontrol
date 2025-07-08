@@ -662,16 +662,6 @@ function getConstrucao_Edifcios_Serie() {
         "main_buildlink_farm_18", //Construcao Fazenda Nv. 18
         "main_buildlink_farm_19", //Construcao Fazenda Nv. 19
         "main_buildlink_farm_20", //Construcao Fazenda Nv. 20
-        "main_buildlink_farm_21", //Construcao Fazenda Nv. 21
-        "main_buildlink_farm_22", //Construcao Fazenda Nv. 22
-        "main_buildlink_farm_23", //Construcao Fazenda Nv. 23
-        "main_buildlink_farm_24", //Construcao Fazenda Nv. 24
-        "main_buildlink_farm_25", //Construcao Fazenda Nv. 25
-        "main_buildlink_farm_26", //Construcao Fazenda Nv. 26
-        "main_buildlink_farm_27", //Construcao Fazenda Nv. 27
-        "main_buildlink_farm_28", //Construcao Fazenda Nv. 28
-        "main_buildlink_farm_29", //Construcao Fazenda Nv. 29
-        "main_buildlink_farm_30", //Construcao Fazenda Nv. 30
         "main_buildlink_market_2", //Construcao Mercado Nv. 2
         "main_buildlink_market_3", //Construcao Mercado Nv. 3
         "main_buildlink_market_4", //Construcao Mercado Nv. 4
@@ -696,6 +686,11 @@ function getConstrucao_Edifcios_Serie() {
         "main_buildlink_market_23", //Construcao Mercado Nv. 23
         "main_buildlink_market_24", //Construcao Mercado Nv. 24
         "main_buildlink_market_25", //Construcao Mercado Nv. 25
+        "main_buildlink_farm_21", //Construcao Fazenda Nv. 21
+        "main_buildlink_farm_22", //Construcao Fazenda Nv. 22
+        "main_buildlink_farm_23", //Construcao Fazenda Nv. 23
+        "main_buildlink_farm_24", //Construcao Fazenda Nv. 24
+        "main_buildlink_farm_25", //Construcao Fazenda Nv. 25
         "main_buildlink_barracks_4", //Q Nv. 4
         "main_buildlink_stable_1", //E Nv. 1
         "main_buildlink_smith_2", //F Nv. 2
@@ -760,6 +755,11 @@ function getConstrucao_Edifcios_Serie() {
         "main_buildlink_academy_1", //Construcao Academia Nv. 1
         "main_buildlink_academy_2", //Construcao Academia Nv. 2
         "main_buildlink_academy_3", //Construcao Academia Nv. 3
+        "main_buildlink_farm_26", //Construcao Fazenda Nv. 26
+        "main_buildlink_farm_27", //Construcao Fazenda Nv. 27
+        "main_buildlink_farm_28", //Construcao Fazenda Nv. 28
+        "main_buildlink_farm_29", //Construcao Fazenda Nv. 29
+        "main_buildlink_farm_30", //Construcao Fazenda Nv. 30
         "main_buildlink_place_1", //Construcao Ponto de Reunião Nv. 1
         "main_buildlink_garage_1", //Construcao Oficina Nv. 1
         "main_buildlink_garage_2", //Construcao Oficina Nv. 2

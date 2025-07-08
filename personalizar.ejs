@@ -35,7 +35,25 @@
         .building-inputs input { width: 50px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
         .btn-add { background-color: #3498db; color: white; }
         #custom-order-list { min-height: 200px; max-height: 500px; overflow-y: auto; border: 1px dashed #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; }
-        .order-item { display: flex; justify-content: space-between; align-items: center; background-color: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 5px; font-weight: 500; }
+        /* Drag and Drop styles */
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-weight: 500;
+            cursor: grab; /* Indicates draggable */
+        }
+        .order-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #3498db;
+        }
+        .order-item.drag-over {
+            border-top: 2px solid #2980b9; /* Visual cue for drop target */
+        }
         .delete-btn { background: #e57373; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 22px; text-align: center; }
         .action-buttons { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
         .btn-save { background-color: #28a745; color: white; }
@@ -131,6 +149,7 @@
         let allProfiles = [];
         let currentProfile = null;
         let currentBuildOrder = [];
+        let draggedItem = null; // To keep track of the item being dragged
 
         const profileSelect = document.getElementById('profile-select');
         const controlsContainer = document.getElementById('building-controls-container');
@@ -185,7 +204,6 @@
             } else {
                 currentProfile = allProfiles.find(p => p.id === profileId);
                 currentBuildOrder = currentProfile ? [...currentProfile.order] : [];
-                // LINHA CORRIGIDA
                 currentProfileNameEl.textContent = `Editando: ${currentProfile.profileName}`;
                 deleteBtn.style.display = 'inline-block';
                 exportBtn.style.display = 'inline-block';
@@ -259,9 +277,9 @@
         }
 
         const showStatus = (message, isError = false) => {
-             statusMsg.textContent = message;
-             statusMsg.style.color = isError ? '#dc3545' : '#218838';
-             setTimeout(() => { statusMsg.textContent = '' }, 4000);
+            statusMsg.textContent = message;
+            statusMsg.style.color = isError ? '#dc3545' : '#218838';
+            setTimeout(() => { statusMsg.textContent = '' }, 4000);
         };
 
         const renderCustomOrder = () => {
@@ -274,6 +292,8 @@
                 const info = BUILDING_INFO[item.building] || { name: item.building, icon: '❓' };
                 const el = document.createElement('div');
                 el.className = 'order-item';
+                el.setAttribute('draggable', 'true'); // Make items draggable
+                el.dataset.index = index; // Store original index
                 el.innerHTML = `<span>${index + 1}. ${info.icon} <strong>${info.name}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`;
                 customList.appendChild(el);
             });
@@ -298,7 +318,6 @@
                 renderScriptList();
                 loadProfile('new');
             } catch (error) {
-                // LINHA CORRIGIDA
                 showStatus(`Não foi possível carregar seus perfis: ${error.message}`, true);
             }
         }
@@ -316,7 +335,7 @@
         deleteBtn.addEventListener('click', handleDeleteProfile);
 
         controlsContainer.addEventListener('click', (e) => {
-             if (e.target.classList.contains('btn-add')) {
+            if (e.target.classList.contains('btn-add')) {
                 const building = e.target.dataset.building;
                 const input = controlsContainer.querySelector(`.quantity-input[data-building="${building}"]`);
                 const quantity = parseInt(input.value, 10);
@@ -337,15 +356,99 @@
                     currentBuildOrder.push({ building, level: newLevel });
                 }
                 renderCustomOrder();
-             }
+            }
         });
         
         customList.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-btn')) {
-                currentBuildOrder.splice(parseInt(e.target.dataset.index, 10), 1);
-                renderCustomOrder();
+                // When an item is deleted, update the dataset.index for remaining items
+                const indexToDelete = parseInt(e.target.dataset.index, 10);
+                currentBuildOrder.splice(indexToDelete, 1);
+                renderCustomOrder(); // Re-render to update indices and display
             }
         });
+
+        // --- Drag and Drop Event Listeners ---
+        customList.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('order-item')) {
+                draggedItem = e.target;
+                e.target.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', e.target.dataset.index); // Store the original index
+            }
+        });
+
+        customList.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Necessary to allow dropping
+            const targetItem = e.target.closest('.order-item');
+            if (targetItem && targetItem !== draggedItem) {
+                const rect = targetItem.getBoundingClientRect();
+                const offsetY = e.clientY - rect.top;
+                
+                // Determine if we are dragging over the top half or bottom half of the item
+                if (offsetY < rect.height / 2) {
+                    targetItem.classList.remove('drag-over-bottom');
+                    targetItem.classList.add('drag-over'); // Top border
+                } else {
+                    targetItem.classList.remove('drag-over');
+                    targetItem.classList.add('drag-over-bottom'); // Bottom border
+                }
+            }
+        });
+
+        customList.addEventListener('dragleave', (e) => {
+            const targetItem = e.target.closest('.order-item');
+            if (targetItem) {
+                targetItem.classList.remove('drag-over', 'drag-over-bottom');
+            }
+        });
+
+        customList.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const dropTarget = e.target.closest('.order-item');
+            if (draggedItem && dropTarget && draggedItem !== dropTarget) {
+                const originalIndex = parseInt(draggedItem.dataset.index, 10);
+                let newIndex = parseInt(dropTarget.dataset.index, 10);
+
+                const rect = dropTarget.getBoundingClientRect();
+                const offsetY = e.clientY - rect.top;
+
+                // Adjust newIndex based on whether dropped on top or bottom half
+                if (offsetY > rect.height / 2) {
+                    newIndex++; // Insert after the target item
+                }
+
+                // If moving down, account for the item being removed
+                if (originalIndex < newIndex) {
+                    newIndex--;
+                }
+                
+                const [movedItem] = currentBuildOrder.splice(originalIndex, 1);
+                currentBuildOrder.splice(newIndex, 0, movedItem);
+                
+                renderCustomOrder(); // Re-render to reflect the new order
+            }
+            // Clean up drag-over classes from all items
+            document.querySelectorAll('.order-item').forEach(item => {
+                item.classList.remove('drag-over', 'drag-over-bottom');
+            });
+            draggedItem.classList.remove('dragging');
+            draggedItem = null;
+        });
+
+        customList.addEventListener('dragend', (e) => {
+            // This event fires on the draggable target after the drag operation has ended
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }
+            // Ensure all drag-over classes are removed if drag ends outside a valid drop target
+            document.querySelectorAll('.order-item').forEach(item => {
+                item.classList.remove('drag-over', 'drag-over-bottom');
+            });
+        });
+        // --- End Drag and Drop Event Listeners ---
+
 
         scriptListContainer.addEventListener('click', async (e) => {
             if (e.target.classList.contains('copy-script-btn')) {

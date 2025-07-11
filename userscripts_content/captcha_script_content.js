@@ -108,7 +108,7 @@ async function sendAlert(message) { // Removido 'user' como parametro, usaremos 
             return resolve();
         }
 
-        const fullMessage = `🚨⚠️ CAPTCHA NECESSARIO! Conta "${getNickname()}" precisa resolver um Captcha agora!`;
+        const fullMessage = `CAPTCHA NECESSARIO! Conta "${getNickname()}"`;
 
         console.log(`[TW Script - Captcha] ENVIANDO ALERTA DE CAPTCHA: "${fullMessage}" para ${ALERT_SERVER_URL}`);
 

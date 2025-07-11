@@ -209,57 +209,42 @@
             background-color: #fafafa;
             flex-grow: 1;
         }
+        /* ============================================= */
+        /* == NOVOS ESTILOS PARA OS ALERTAS == */
+        /* ============================================= */
         .alert-item {
             display: flex;
-            align-items: flex-start;
-            margin-bottom: 10px;
-            padding: 10px 15px;
-            background-color: #e3f2fd;
-            border-left: 5px solid #2196F3;
-            border-radius: 4px;
-            transition: transform 0.2s ease-in-out;
+            flex-direction: column; /* Empilha o cabeçalho e a mensagem */
+            margin-bottom: 15px;
+            border-radius: 6px;
+            overflow: hidden; /* Garante que os cantos arredondados funcionem */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+            border-left-width: 5px; /* Mantém a barra lateral colorida */
+        }
+        .alert-item.captcha { border-left-color: #FFC107; }
+        .alert-item.build-order { border-left-color: #4CAF50; }
+        .alert-item.attack-alert { border-left-color: #D32F2F; }
+        
+        .alert-timestamp {
+            background-color: #495057; /* Cor escura para o cabeçalho */
+            color: #ffffff;
+            padding: 8px 12px;
+            font-weight: bold;
             font-size: 0.9em;
         }
-        .alert-item.captcha {
-            border-left-color: #FFC107;
-            background-color: #FFFDE7;
-        }
-        .alert-item.build-order {
-            border-left-color: #4CAF50;
-            background-color: #E8F5E9;
-        }
-        .alert-item.attack-alert {
-            border-left-color: #D32F2F;
-            background-color: #FFEBEE;
-        }
-        .alert-item:last-child {
-            margin-bottom: 0;
-        }
-        .alert-item:hover {
-            transform: translateY(-2px);
-        }
-        .alert-item .timestamp {
-            font-weight: bold;
-            color: #1976D2;
-            margin-right: 10px;
-            flex-shrink: 0;
-            min-width: 65px;
-        }
-        .alert-item.captcha .timestamp { color: #FFA000; }
-        .alert-item.build-order .timestamp { color: #388E3C; }
-        .alert-item.attack-alert .timestamp { color: #C62828; }
-        .alert-item .message {
-            flex-grow: 1;
-            word-break: break-word;
+        .alert-message {
+            background-color: #ffffff; /* Fundo branco para a mensagem */
+            padding: 12px 15px;
             display: flex;
-            align-items: flex-start;
+            align-items: center;
+            color: #333;
         }
-        .alert-item .message .emoji-prefix {
-            margin-right: 5px;
-            font-size: 1.2em;
-            line-height: 1;
-            flex-shrink: 0;
+        .alert-message .emoji-prefix {
+            margin-right: 10px;
+            font-size: 1.3em;
         }
+        
         .no-alerts {
             text-align: center;
             color: #777;

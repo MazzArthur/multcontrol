@@ -209,7 +209,7 @@ async function sendBuildingAlert(buildingId) {
 
         const nickname = getNickname();
         const buildingName = getBuildingName(buildingId);
-        const message = `ðŸ› ï¸ Construcao Iniciada: "${buildingName}" na conta "${nickname}"!`;
+        const message = `Construcao Iniciada: "${buildingName}" na conta "${nickname}"!`;
 
         console.log(`[TW Script] ENVIANDO ALERTA DE CONSTRUCAO: "${message}" para ${ALERT_SERVER_URL}`);
 

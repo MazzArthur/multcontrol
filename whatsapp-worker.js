@@ -68,27 +68,40 @@ client.initialize().catch(err => console.error('[WORKER ERROR] Falha na iniciali
 // --- API interna do Worker ---
 
 // ROTA DE "PING" PARA MANTER O WORKER ATIVO
-app.get('/ping', (req, res) => {
-    console.log(`[WORKER] Ping recebido em: ${new Date().toISOString()}`);
-    res.status(200).json({ 
-        status: 'ok', 
-        service: 'whatsapp-worker', 
-        timestamp: new Date() 
-    });
-});
 app.post('/send-message', async (req, res) => {
     const { number, message } = req.body;
     if (!number || !message) {
         return res.status(400).json({ error: 'Número e mensagem são obrigatórios.' });
     }
+
     const chatId = `${number.replace(/\D/g, '')}@c.us`;
+
     try {
-        await client.sendMessage(chatId, message);
-        console.log(`[WORKER] Mensagem enviada para ${number}`);
-        res.status(200).json({ success: true, message: 'Mensagem enviada.' });
+        // --- VALIDAÇÃO ADICIONADA ---
+        const isRegistered = await client.isRegisteredUser(chatId);
+        if (!isRegistered) {
+            console.error(`[WORKER ERROR] Tentativa de envio para número não registrado no WhatsApp: ${number}`);
+            return res.status(404).json({ success: false, error: 'Este número não parece ter WhatsApp.' });
+        }
+
+        // Simula "digitando..." para parecer mais humano
+        const chat = await client.getChatById(chatId);
+        await chat.sendStateTyping();
+        
+        // Adiciona um atraso aleatório antes de enviar
+        const delay = Math.floor(Math.random() * 3000) + 1000; // Atraso de 1 a 4 segundos
+        setTimeout(async () => {
+            await client.sendMessage(chatId, message);
+            console.log(`[WORKER] Mensagem enviada para ${number}`);
+            await chat.clearState(); // Limpa o status "digitando"
+        }, delay);
+        
+        // Responde imediatamente ao servidor principal, sem esperar o envio
+        res.status(200).json({ success: true, message: 'Ordem de envio recebida.' });
+
     } catch (error) {
-        console.error(`[WORKER ERROR] Falha ao enviar mensagem para ${number}:`, error);
-        res.status(500).json({ success: false, error: 'Falha ao enviar mensagem.' });
+        console.error(`[WORKER ERROR] Falha ao processar mensagem para ${number}:`, error);
+        res.status(500).json({ success: false, error: 'Falha ao processar a mensagem.' });
     }
 });
 

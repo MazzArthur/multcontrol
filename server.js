@@ -246,6 +246,7 @@ app.post('/alert', async (req, res) => {
     const { message } = req.body;
     const authToken = req.headers.authorization?.split('Bearer ')[1] || null;
     if (!message || !authToken) return res.status(400).send('Mensagem ou token de autenticação ausente.');
+
     try {
         const decodedToken = await admin.auth().verifyIdToken(authToken);
         const userId = decodedToken.uid;
@@ -263,14 +264,28 @@ app.post('/alert', async (req, res) => {
                 const userPhoneNumber = userDoc.data().whatsappNumber;
                 const workerUrl = process.env.WHATSAPP_WORKER_URL;
                 if (workerUrl) {
+                    
+                    // --- LÓGICA DE RANDOMIZAÇÃO ADICIONADA ---
+                    const headers = [
+                        "🚨 ALERTA MULTCONTROL 🚨",
+                        "⚠️ AVISO IMPORTANTE ⚠️",
+                        "🔔 Notificação do Sistema 🔔",
+                        "‼️ ATENÇÃO NECESSÁRIA ‼️"
+                    ];
+                    const randomHeader = headers[Math.floor(Math.random() * headers.length)];
+                    const finalMessage = `${randomHeader}\n\n${message}`;
+                    // --- FIM DA LÓGICA ---
+
                     axios.post(`${workerUrl}/send-message`, {
                         number: userPhoneNumber,
-                        message: `🚨 ALERTA MULTCONTROL 🚨\n\n${message}`
+                        message: finalMessage // <-- Usa a mensagem randomizada
                     }).catch(err => console.error("[SERVER ERROR] Erro ao se comunicar com o WhatsApp Worker:", err.message));
                 }
             }
         }
+        
         res.status(200).send('Alerta recebido com sucesso!');
+
     } catch (error) { 
         console.error('[SERVER ERROR] Erro na rota /alert:', error);
         res.status(401).send('Não autorizado ou erro ao processar alerta.'); 

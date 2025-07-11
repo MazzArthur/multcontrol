@@ -269,6 +269,11 @@
         .alerts-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
         .alerts-list::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
         .alerts-list::-webkit-scrollbar-thumb:hover { background: #555; }
+        .panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; width: 100%; max-width: 1200px; box-sizing: border-box; }
+        .settings-input-group { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+        .settings-input-group input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn-save { background-color: #28a745; }
+        .btn-save:disabled { background-color: #ccc; }
     </style>
 </head>
 <body>
@@ -287,7 +292,14 @@
             <button id="logoutBtn">Sair</button>
         </div>
     </header>
-
+    <div class="panel">
+        <h2>Configurações de Notificação por WhatsApp</h2>
+        <div class="settings-input-group">
+            <input type="tel" id="whatsapp-number-input" placeholder="Seu nº com código do país (Ex: 5549999999999)">
+            <button id="save-whatsapp-btn" class="btn btn-save">Salvar Número</button>
+        </div>
+        <small>Formato: Código do País (55) + DDD + Número, tudo junto, sem símbolos.</small>
+    </div>
     <div class="script-generation-section">
         <h2>Seus Scripts Personalizados (Copiar e Colar no Tampermonkey)</h2>
         <p style="font-size: 0.9em; text-align: center; margin-bottom: 20px; color: #666;">
@@ -395,6 +407,8 @@
 
         // Função principal de inicialização
         function initializeDashboardPage() {
+            const whatsappInput = document.getElementById('whatsapp-number-input');
+            const saveWhatsappBtn = document.getElementById('save-whatsapp-btn');
             const userEmailDisplay = document.getElementById('userEmailDisplay');
             const logoutBtn = document.getElementById('logoutBtn');
             const userUidDisplay = document.getElementById('userUidDisplay');
@@ -422,6 +436,50 @@
                 if (user) {
                     userEmailDisplay.textContent = `Logado como: ${user.email}`;
                     userUidDisplay.textContent = user.uid;
+                    async function apiRequest(endpoint, method = 'GET', body = null) {
+                    const idToken = await user.getIdToken();
+                    const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
+                    if (body) options.body = JSON.stringify(body);
+                    const response = await fetch(`/api/${endpoint}`, options);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Falha na requisição à API.');
+                    }
+                    return response.status !== 204 ? await response.json() : null;
+                }
+        
+                async function loadUserSettings() {
+                    try {
+                        const settings = await apiRequest('user/settings');
+                        if (settings && settings.whatsappNumber) {
+                            whatsappInput.value = settings.whatsappNumber;
+                        }
+                    } catch (error) {
+                        console.warn("Não foi possível carregar as configurações do usuário.", error);
+                    }
+                }
+        
+                // Carrega as configurações assim que o usuário é confirmado
+                loadUserSettings();
+        
+                saveWhatsappBtn.addEventListener('click', async () => {
+                    const number = whatsappInput.value.trim();
+                    if (!/^\d{12,13}$/.test(number)) {
+                        alert('Número de WhatsApp inválido. Use o formato 55DDD9XXXXXXXX.');
+                        return;
+                    }
+                    saveWhatsappBtn.disabled = true;
+                    saveWhatsappBtn.textContent = 'Salvando...';
+                    try {
+                        await apiRequest('user/settings', 'POST', { whatsappNumber: number });
+                        alert('Número salvo com sucesso!');
+                    } catch (error) {
+                        alert('Erro ao salvar o número. Tente novamente.');
+                    } finally {
+                        saveWhatsappBtn.disabled = false;
+                        saveWhatsappBtn.textContent = 'Salvar Número';
+                    }
+                });
 
                     // Fetch scripts
                     try {

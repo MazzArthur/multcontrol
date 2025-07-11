@@ -111,7 +111,15 @@ app.get('/admin-wpp', (req, res) => {
         adminUid: process.env.ADMIN_UID 
     });
 });
-
+// ROTA DE "PING" PARA MANTER O SERVIÇO WEB ATIVO
+app.get('/ping', (req, res) => {
+    console.log(`[SERVER] Ping recebido em: ${new Date().toISOString()}`);
+    res.status(200).json({ 
+        status: 'ok', 
+        service: 'web-service', 
+        timestamp: new Date() 
+    });
+});
 
 // ===========================================
 // ** ROTAS DE API **

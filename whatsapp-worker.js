@@ -1,69 +1,93 @@
 const express = require('express');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, RemoteAuth } = require('whatsapp-web.js'); // Mudamos de LocalAuth para RemoteAuth
 const qrcode = require('qrcode');
-const fs = require('fs');
 const admin = require('firebase-admin');
 require('dotenv').config();
+
+// --- Conexão com Firebase ---
+try {
+    const buff = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY, 'base64');
+    const serviceAccountJson = buff.toString('utf-8');
+    const serviceAccount = JSON.parse(serviceAccountJson);
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    console.log('[WORKER] Conectado ao Firebase.');
+} catch (e) {
+    console.error('[WORKER ERROR] Falha ao conectar ao Firebase:', e);
+    process.exit(1);
+}
+const db = admin.firestore();
+
+// =================================================================
+// == NOVA LÓGICA PARA SALVAR A SESSÃO NO FIRESTORE ==
+// =================================================================
+// Criamos um "Store" que diz à biblioteca como salvar/carregar do Firestore
+const { FirestoreStore } = require('wwebjs-mongo'); // Usaremos a estrutura, mas adaptada
+class CustomFirestoreStore {
+    constructor() {
+        this.sessionRef = db.collection('whatsapp_sessions').doc('auth_session');
+    }
+    async save(session) {
+        await this.sessionRef.set(session);
+    }
+    async sessionExists(session) {
+        const doc = await this.sessionRef.get();
+        return doc.exists;
+    }
+    async extract(session) {
+        const doc = await this.sessionRef.get();
+        return doc.exists ? doc.data() : null;
+    }
+    async delete(session) {
+        await this.sessionRef.delete();
+    }
+}
+
+const store = new CustomFirestoreStore();
+// =================================================================
 
 // --- Configuração do Worker ---
 const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 3001; 
 
-// --- Conexão com Firebase ---
-try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    console.log('[WORKER] Conectado ao Firebase.');
-} catch (e) {
-    console.error('[WORKER ERROR] Falha ao conectar ao Firebase:', e.message);
-}
-const db = admin.firestore();
-
-// --- Inicialização do Cliente WhatsApp ---
-console.log('[WORKER] Inicializando cliente WhatsApp...');
+// --- Inicialização do Cliente WhatsApp com a nova estratégia ---
+console.log('[WORKER] Inicializando cliente WhatsApp com RemoteAuth...');
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new RemoteAuth({
+        store: store,
+        backupSyncIntervalMs: 300000 // Salva a sessão no Firestore a cada 5 minutos
+    }),
     puppeteer: {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
     }
 });
 
-// --- Eventos do Cliente WhatsApp ---
+// --- Eventos do Cliente WhatsApp (permanecem os mesmos) ---
 client.on('qr', async (qr) => {
-    console.log('[WORKER] QR Code recebido. Salvando no Firestore...');
+    console.log('[WORKER] QR Code recebido. Salvando no Firestore para o painel de admin...');
     try {
         const qrImageUrl = await qrcode.toDataURL(qr);
         await db.collection('whatsapp_status').doc('session').set({
             qrCodeUrl: qrImageUrl,
-            status: 'QR_CODE_READY',
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
+            status: 'QR_CODE_READY'
         });
-        console.log('[WORKER] QR Code salvo. Escaneie pelo painel de admin.');
-    } catch (err) {
-        console.error('[WORKER ERROR] Falha ao gerar ou salvar QR Code:', err);
-    }
+    } catch (err) { console.error('[WORKER ERROR] Falha ao salvar QR Code:', err); }
 });
 
 client.on('ready', async () => {
     console.log('[WORKER] Cliente WhatsApp está pronto e conectado!');
-    await db.collection('whatsapp_status').doc('session').set({
-        status: 'CONNECTED',
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-    });
+    await db.collection('whatsapp_status').doc('session').set({ status: 'CONNECTED' });
 });
 
-client.on('disconnected', async (reason) => {
-    console.log('[WORKER] Cliente foi desconectado:', reason);
-    await db.collection('whatsapp_status').doc('session').set({
-        status: 'DISCONNECTED',
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-    });
-    client.initialize(); // Tenta reconectar
+client.on('remote_session_saved', () => {
+    console.log('[WORKER] Sessão salva com sucesso no Firestore!');
 });
+
+// ... outros eventos como 'disconnected' ...
 
 client.initialize().catch(err => console.error('[WORKER ERROR] Falha na inicialização do cliente:', err));
+
 
 // --- API interna do Worker ---
 

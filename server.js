@@ -79,6 +79,18 @@ function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {
         return Buffer.from(`// Erro ao carregar script ${fileName}.`).toString('base64');
     }
 }
+// --- MIDDLEWARE DE AUTENTICAÇÃO PARA APIs ---
+const requireAuth = async (req, res, next) => {
+    const idToken = req.headers.authorization?.split('Bearer ')[1] || null;
+    if (!idToken) return res.status(401).json({ error: 'Token de autenticação ausente.' });
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        req.user = { uid: decodedToken.uid, email: decodedToken.email };
+        next();
+    } catch (error) {
+        return res.status(403).json({ error: 'Falha na autenticação.' });
+    }
+};
 
 // --- ROTAS DE PÁGINAS ---
 app.get('/', (req, res) => {
@@ -100,18 +112,6 @@ app.get('/admin-wpp', requireAuth, (req, res) => {
     res.render('admin-whatsapp', { firebaseConfig: getFirebaseClientConfig() });
 });
 
-// --- MIDDLEWARE DE AUTENTICAÇÃO PARA APIs ---
-const requireAuth = async (req, res, next) => {
-    const idToken = req.headers.authorization?.split('Bearer ')[1] || null;
-    if (!idToken) return res.status(401).json({ error: 'Token de autenticação ausente.' });
-    try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        req.user = { uid: decodedToken.uid, email: decodedToken.email };
-        next();
-    } catch (error) {
-        return res.status(403).json({ error: 'Falha na autenticação.' });
-    }
-};
 
 // ===========================================
 // ** ROTAS DE API **

@@ -66,6 +66,16 @@ client.on('disconnected', async (reason) => {
 client.initialize().catch(err => console.error('[WORKER ERROR] Falha na inicialização do cliente:', err));
 
 // --- API interna do Worker ---
+
+// ROTA DE "PING" PARA MANTER O WORKER ATIVO
+app.get('/ping', (req, res) => {
+    console.log(`[WORKER] Ping recebido em: ${new Date().toISOString()}`);
+    res.status(200).json({ 
+        status: 'ok', 
+        service: 'whatsapp-worker', 
+        timestamp: new Date() 
+    });
+});
 app.post('/send-message', async (req, res) => {
     const { number, message } = req.body;
     if (!number || !message) {

@@ -545,7 +545,13 @@
                                 const timestampSpan = document.createElement('span');
                                 timestampSpan.className = 'timestamp';
                                 const date = alert.timestamp ? alert.timestamp.toDate() : new Date();
-                                timestampSpan.textContent = date.toLocaleTimeString('pt-BR');
+                                const formattedDate = date.toLocaleString('pt-BR', {
+                                day: '2-digit', 
+                                month: '2-digit', 
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                            });
+                            timestampSpan.textContent = `[${formattedDate}]`;
                                 
                                 const messageSpan = document.createElement('span');
                                 messageSpan.className = 'message';

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin WhatsApp - MULTCONTROL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #333; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .admin-panel { background-color: #444; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        #qr-container { background-color: white; padding: 20px; border-radius: 8px; margin-top: 20px; display: inline-block; min-height: 250px; min-width: 250px; display:flex; justify-content:center; align-items:center; }
+        #qr-container img { max-width: 100%; }
+        #status-text { font-size: 1.2em; font-weight: bold; }
+        .status-connected { color: #4CAF50; }
+        .status-disconnected { color: #F44336; }
+        .status-loading { color: #FFC107; }
+    </style>
+</head>
+<body>
+    <div class="admin-panel">
+        <h1>Painel de Conexão WhatsApp</h1>
+        <p id="status-text" class="status-loading">Aguardando status do worker...</p>
+        <div id="qr-container">
+            </div>
+    </div>
+
+<script>
+    const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const statusText = document.getElementById('status-text');
+        const qrContainer = document.getElementById('qr-container');
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Usuário está logado, agora ouve as mudanças no Firestore
+                db.collection('whatsapp_status').doc('session')
+                  .onSnapshot(doc => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        console.log("Novo status recebido:", data.status);
+
+                        switch (data.status) {
+                            case 'QR_CODE_READY':
+                                statusText.textContent = 'Por favor, escaneie o QR Code abaixo.';
+                                statusText.className = 'status-loading';
+                                qrContainer.innerHTML = `<img src="${data.qrCodeUrl}" alt="QR Code do WhatsApp">`;
+                                break;
+                            case 'CONNECTED':
+                                statusText.textContent = 'CONECTADO COM SUCESSO!';
+                                statusText.className = 'status-connected';
+                                qrContainer.innerHTML = '<p style="color: green; font-weight: bold;">Conectado!</p>';
+                                break;
+                            case 'DISCONNECTED':
+                                statusText.textContent = 'DESCONECTADO. Verifique o log do worker.';
+                                statusText.className = 'status-disconnected';
+                                qrContainer.innerHTML = '<p style="color: red;">Desconectado. Tente reiniciar o worker.</p>';
+                                break;
+                            default:
+                                statusText.textContent = 'Status desconhecido...';
+                                statusText.className = 'status-loading';
+                        }
+                    } else {
+                        statusText.textContent = 'Aguardando o worker do WhatsApp iniciar...';
+                    }
+                }, err => {
+                    console.error("Erro ao ouvir o status do WhatsApp:", err);
+                    statusText.textContent = 'Erro ao conectar com o Firestore.';
+                    statusText.className = 'status-disconnected';
+                });
+
+            } else {
+                document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado como admin para ver esta página.</p>';
+            }
+        });
+    });
+</script>
+</body>
+</html>

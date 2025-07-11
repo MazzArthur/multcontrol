@@ -107,7 +107,34 @@ const requireAuth = async (req, res, next) => {
 // ===========================================
 // ** ROTAS DE API **
 // ===========================================
+// --- API DE CONFIGURAÇÕES DO USUÁRIO ---
+app.get('/api/user/settings', requireAuth, async (req, res) => {
+    try {
+        const userDoc = await db.collection('users').doc(req.user.uid).get();
+        if (!userDoc.exists) {
+            return res.status(200).json({}); // Retorna objeto vazio se não houver configurações
+        }
+        res.status(200).json(userDoc.data());
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao buscar configurações.' });
+    }
+});
 
+app.post('/api/user/settings', requireAuth, async (req, res) => {
+    const { whatsappNumber } = req.body;
+    if (!whatsappNumber) {
+        return res.status(400).json({ error: 'Número de WhatsApp é obrigatório.' });
+    }
+    try {
+        // 'set' com 'merge: true' cria o documento se não existir ou atualiza o campo se existir
+        await db.collection('users').doc(req.user.uid).set({
+            whatsappNumber: whatsappNumber
+        }, { merge: true });
+        res.status(200).json({ message: 'Configurações salvas com sucesso.' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao salvar configurações.' });
+    }
+});
 // --- API DE GERENCIAMENTO DE ORDENS DE CONSTRUÇÃO ---
 app.get('/api/build-orders', requireAuth, async (req, res) => {
     try {

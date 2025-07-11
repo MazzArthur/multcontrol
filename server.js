@@ -5,6 +5,7 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const helmet = require('helmet');
+const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
@@ -20,7 +21,7 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: [ "'self'", "https://www.gstatic.com", "https://apis.google.com", "https://identitytoolkit.googleapis.com", "'unsafe-inline'" ], 
-            connectSrc: [ "'self'", "https://multcontrol.onrender.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com", "https://identitytoolkit.googleapis.com" ], 
+            connectSrc: [ "'self'", "https://multcontrol.onrender.com", "https://*.googleapis.com", "https://firestore.googleapis.com" ], 
             imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://www.google.com", "https://dsbr.innogamescdn.com"],
             styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -53,7 +54,6 @@ function getFirebaseClientConfig() {
     };
 }
 
-// **FUNÇÃO RESTAURADA**
 function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {
     try {
         const filePath = path.resolve(__dirname, 'userscripts_content', fileName);
@@ -79,7 +79,6 @@ function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {
         return Buffer.from(`// Erro ao carregar script ${fileName}.`).toString('base64');
     }
 }
-
 
 // --- ROTAS DE PÁGINAS ---
 app.get('/', (req, res) => {
@@ -178,7 +177,7 @@ app.post('/api/generate-custom-script', requireAuth, async (req, res) => {
         const firebaseClientConfig = getFirebaseClientConfig();
         const configRegex = /(const\s+FIREBASE_CLIENT_CONFIG\s*=\s*){};/;
         if (configRegex.test(scriptText)) scriptText = scriptText.replace(configRegex, `$1${JSON.stringify(firebaseClientConfig)};`);
-
+        
         let userscriptApiKey;
         const keyDoc = await db.collection('userscriptKeys').doc(req.user.uid).get();
         if (keyDoc.exists) {
@@ -205,14 +204,33 @@ app.post('/alert', async (req, res) => {
     if (!message || !authToken) return res.status(400).send('Mensagem ou token de autenticação ausente.');
     try {
         const decodedToken = await admin.auth().verifyIdToken(authToken);
+        const userId = decodedToken.uid;
+        
         await db.collection('alerts').add({
             message: message,
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            userId: decodedToken.uid,
+            userId: userId,
             userEmail: decodedToken.email || 'N/A'
         });
+
+        if (message.toUpperCase().includes('CAPTCHA') || message.toUpperCase().includes('ATAQUE')) {
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (userDoc.exists && userDoc.data().whatsappNumber) {
+                const userPhoneNumber = userDoc.data().whatsappNumber;
+                const workerUrl = process.env.WHATSAPP_WORKER_URL;
+                if (workerUrl) {
+                    axios.post(`${workerUrl}/send-message`, {
+                        number: userPhoneNumber,
+                        message: `🚨 ALERTA MULTCONTROL 🚨\n\n${message}`
+                    }).catch(err => console.error("[SERVER ERROR] Erro ao se comunicar com o WhatsApp Worker:", err.message));
+                }
+            }
+        }
         res.status(200).send('Alerta recebido com sucesso!');
-    } catch (error) { res.status(401).send('Não autorizado ou erro ao processar alerta.'); }
+    } catch (error) { 
+        console.error('[SERVER ERROR] Erro na rota /alert:', error);
+        res.status(401).send('Não autorizado ou erro ao processar alerta.'); 
+    }
 });
 
 app.post('/api/get_fresh_id_token', async (req, res) => {
@@ -227,7 +245,7 @@ app.post('/api/get_fresh_id_token', async (req, res) => {
     } catch (error) { res.status(500).json({ error: 'Erro interno ao gerar Custom Token.' }); }
 });
 
-// **ROTA RESTAURADA**
+// **ROTA ORIGINAL RESTAURADA**
 app.get('/get_userscripts_with_token', requireAuth, async (req, res) => {
     try {
         let userscriptKey;

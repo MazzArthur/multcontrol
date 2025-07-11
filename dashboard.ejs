@@ -551,7 +551,7 @@
                                 hour: '2-digit', 
                                 minute: '2-digit'
                             });
-                            timestampSpan.textContent = `[${formattedDate}]`;
+                            timestampContainer.textContent = formattedDate.replace(',', '');
                                 
                                 const messageSpan = document.createElement('span');
                                 messageSpan.className = 'message';

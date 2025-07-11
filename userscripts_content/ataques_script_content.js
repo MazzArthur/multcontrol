@@ -195,7 +195,7 @@ function showNativeNotification(title, body, villageId) {
                     }
 
                     if (currentIncomingsCount > lastKnownIncomingsCount && currentIncomingsCount > 0) {
-                        const message = `ATAQUE(S) NOVO(S)! Conta "${nickname}" tem ${currentIncomingsCount} ataque(s) a chegar!`;
+                        const message = `"${nickname}" tem ${currentIncomingsCount} ataque(s) a chegar!`;
                         await sendAttackAlert(message); // Adicionado 'await'
                         showNativeNotification(NATIVE_NOTIFICATION_TITLE, `A conta "${nickname}" tem ${currentIncomingsCount} ataque(s) a chegar!`, villageId);
                     } else if (currentIncomingsCount < lastKnownIncomingsCount) {

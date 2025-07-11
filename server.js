@@ -91,6 +91,15 @@ app.get('/personalizar', (req, res) => {
     res.render('personalizar', { firebaseConfig: getFirebaseClientConfig() });
 });
 
+app.get('/admin-wpp', requireAuth, (req, res) => {
+    // Verifica se o UID do usuário logado é o mesmo do admin definido no .env
+    if (req.user.uid !== process.env.ADMIN_UID) {
+        return res.status(403).send('<h1>Acesso Proibido</h1><p>Você não tem permissão para acessar esta página.</p>');
+    }
+    // Se for o admin, renderiza a página
+    res.render('admin-whatsapp', { firebaseConfig: getFirebaseClientConfig() });
+});
+
 // --- MIDDLEWARE DE AUTENTICAÇÃO PARA APIs ---
 const requireAuth = async (req, res, next) => {
     const idToken = req.headers.authorization?.split('Bearer ')[1] || null;

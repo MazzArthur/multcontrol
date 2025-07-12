@@ -324,6 +324,34 @@ app.get('/get_userscripts_with_token', requireAuth, async (req, res) => {
     }
 });
 
+// --- NOVA ROTA PARA REGISTRAR NICKNAMES ---
+app.post('/api/nicknames/register', requireAuth, async (req, res) => {
+    const { nickname } = req.body;
+    if (!nickname) {
+        return res.status(400).json({ error: 'Nickname é obrigatório.' });
+    }
+
+    try {
+        const userId = req.user.uid;
+        const nicknameRef = db.collection('users').doc(userId).collection('nicknames').doc(nickname);
+        
+        const doc = await nicknameRef.get();
+        if (doc.exists) {
+            // O nickname já existe, não precisa fazer nada.
+            return res.status(200).json({ message: 'Nickname já registrado.' });
+        } else {
+            // Salva o novo nickname
+            await nicknameRef.set({
+                name: nickname,
+                registeredAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            return res.status(201).json({ message: 'Nickname registrado com sucesso.' });
+        }
+    } catch (error) {
+        console.error('[SERVER ERROR] Erro ao registrar nickname:', error);
+        return res.status(500).json({ error: 'Erro interno ao registrar o nickname.' });
+    }
+});
 
 // --- INICIAR SERVIDOR ---
 app.listen(PORT, () => {

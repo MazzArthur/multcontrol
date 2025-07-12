@@ -1,6 +1,6 @@
 const express = require('express');
 const { Client, RemoteAuth } = require('whatsapp-web.js');
-const { FirestoreStore } = require('wwebjs-firestore'); // <-- Importa da nova biblioteca
+const { FirestoreStore } = require('wwebjs-mongo'); // <-- Importa da nova biblioteca
 const qrcode = require('qrcode');
 const admin = require('firebase-admin');
 require('dotenv').config();
@@ -64,7 +64,7 @@ client.on('ready', async () => {
 });
 
 client.on('remote_session_saved', () => {
-    console.log('[WORKER] Sessão salva com sucesso no Firestore via wwebjs-firestore!');
+    console.log('[WORKER] Sessão salva com sucesso no Firestore via wwebjs-mongo!');
 });
 
 client.on('disconnected', async (reason) => {

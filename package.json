@@ -20,6 +20,7 @@
     "helmet": "^8.1.0",
     "puppeteer": "^24.12.1",
     "qrcode": "^1.5.4",
-    "whatsapp-web.js": "^1.31.0"
+    "whatsapp-web.js": "^1.31.0",
+    "wwebjs-mongo": "^1.1.0"
   }
 }

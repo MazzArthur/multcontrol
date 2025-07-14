@@ -293,12 +293,15 @@
         </div>
     </header>
     <div class="panel">
-        <h2>Configurações de Notificação por WhatsApp</h2>
-        <div class="settings-input-group">
-            <input type="tel" id="whatsapp-number-input" placeholder="Seu nº com código do país (Ex: 5549999999999)">
-            <button id="save-whatsapp-btn" class="btn btn-save">Salvar Número</button>
-        </div>
-        <small>Formato: Código do País (55) + DDD + Número, tudo junto, sem símbolos.(Sem o 9 adicional!)</small>
+            <h2>Configurações de Notificação</h2>
+            <div class="settings-input-group">
+                <input type="tel" id="whatsapp-number-input" placeholder="Nº de WhatsApp (opcional)">
+            </div>
+            <div class="settings-input-group" style="margin-top: 15px;">
+                <input type="text" id="discord-webhook-input" placeholder="URL do Webhook do Discord (opcional)">
+            </div>
+            <small>Preencha um ou ambos os campos para receber alertas.</small>
+            <button id="save-settings-btn" class="btn btn-save" style="margin-top: 15px;">Salvar Configurações</button>
     </div>
     <div class="script-generation-section">
         <h2>Seus Scripts Personalizados (Copiar e Colar no Tampermonkey)</h2>

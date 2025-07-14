@@ -154,6 +154,26 @@ app.post('/api/user/settings', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Erro ao salvar configurações.' });
     }
 });
+// Rota para o Tampermonkey verificar a VERSÃO do script
+app.get('/scripts/upador.meta.js', (req, res) => {
+    const filePath = path.join(__dirname, 'userscripts_content', 'upador_script_content.js');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) return res.status(404).send('// Script not found');
+        const headerMatch = data.match(/\/\/\s*==UserScript==[\s\S]+?\/\/\s*==\/UserScript==/);
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        res.send(headerMatch ? headerMatch[0] : '// Header not found');
+    });
+});
+
+// Rota para o Tampermonkey BAIXAR a versão completa do script
+app.get('/scripts/upador.user.js', (req, res) => {
+    const filePath = path.join(__dirname, 'userscripts_content', 'upador_script_content.js');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) return res.status(404).send('// Script not found');
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        res.send(data);
+    });
+});
 // --- API DE GERENCIAMENTO DE ORDENS DE CONSTRUÇÃO ---
 app.get('/api/build-orders', requireAuth, async (req, res) => {
     try {

@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         Upador Automático v0.2.0 - Dinâmico
+// @name         Upador Automático v1.0 - Final
 // @icon         https://i.imgur.com/7WgHTT8.gif
-// @description  Script que busca a ordem de construção dinamicamente da plataforma MULTCONTROL.
+// @description  Script que busca a ordem de construção dinamicamente da plataforma MULTCONTROL, coleta recompensas e mais.
 // @author       MazzArthur
 // @include      http*://*.*game.php*
-// @version      0.2.0
+// @version      1.0.0
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        unsafeWindow
@@ -15,44 +15,40 @@
 // @connect      multcontrol.onrender.com
 // ==/UserScript==
 
-(async function() {
+(function() {
     'use strict';
 
-    //*************************** CONFIGURAÇÃO ***************************//
+    //*************************** CONFIGURAÇÃO E CONSTANTES GLOBAIS ***************************//
     const Min_Tempo_Espera = 800;
     const Max_Tempo_Espera = 900;
     const Etapa = "Etapa_1";
     const Auto_Refresh_Ativado = true;
     const Intervalo_Refresh_Minutos = 30;
-    const ALERTA_CONSTRUCAO_ATIVADO = true;
-
-    // --- CONSTANTES DA PLATAFORMA ---
     const API_BASE_URL = "https://multcontrol.onrender.com";
-    const ALERT_SERVER_URL = `${API_BASE_URL}/alert`;
 
     // --- CAMPOS INJETADOS PELA PLATAFORMA ---
     const FIREBASE_CLIENT_CONFIG = {};
     const USERSCRIPT_API_KEY = "";
 
     // --- VARIÁVEIS DE CONTROLE ---
-    let activeBuildOrder = null;
-    let lastBuildingAlertSent = { id: null, timestamp: 0 };
-    const ALERT_COOLDOWN_MS = 5000;
+    var authClient;
     const Visualizacao_Geral = "OVERVIEW_VIEW";
     const Edificio_Principal = "HEADQUARTERS_VIEW";
-    var authClient;
 
     // ============================================================================
-    // == INICIALIZAÇÃO E AUTENTICAÇÃO ==
+    // == SEÇÃO DE FUNÇÕES ==
     // ============================================================================
-    try {
-        if (typeof firebase !== 'undefined' && Object.keys(FIREBASE_CLIENT_CONFIG).length > 0) {
-            if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CLIENT_CONFIG);
-            authClient = firebase.auth();
-        } else {
-            console.warn('[TW Script] Configs do Firebase ausentes.');
-        }
-    } catch (e) { console.error('[TW Script ERROR] Falha na inicialização do Firebase:', e); }
+
+    // --- FUNÇÕES DE AUTENTICAÇÃO E API ---
+
+    function initializeFirebase() {
+        try {
+            if (typeof firebase !== 'undefined' && Object.keys(FIREBASE_CLIENT_CONFIG).length > 0) {
+                if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CLIENT_CONFIG);
+                authClient = firebase.auth();
+            } else { console.warn('[TW Script] Configs do Firebase ausentes.'); }
+        } catch (e) { console.error('[TW Script ERROR] Falha na inicialização do Firebase:', e); }
+    }
 
     async function getFreshIdToken() {
         const CACHED_ID_TOKEN_KEY = 'cachedFirebaseIdToken';
@@ -60,17 +56,14 @@
         const now = Date.now();
         const cachedToken = GM_getValue(CACHED_ID_TOKEN_KEY);
         const cachedExpiry = GM_getValue(CACHED_TOKEN_EXPIRY_KEY);
-
-        if (cachedToken && cachedExpiry && now < cachedExpiry - (5 * 60 * 1000)) {
-            return cachedToken;
-        }
+        if (cachedToken && cachedExpiry && now < cachedExpiry - 300000) { return cachedToken; }
         try {
             if (!USERSCRIPT_API_KEY) throw new Error("USERSCRIPT_API_KEY nao configurada!");
             const tokenResponse = await new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: "POST", url: `${API_BASE_URL}/api/get_fresh_id_token`,
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${USERSCRIPT_API_KEY}` },
-                    onload: res => resolve(res), onerror: err => reject(err)
+                    onload: resolve, onerror: reject
                 });
             });
             if (tokenResponse.status !== 200) throw new Error(`Falha ao obter Custom Token: Status ${tokenResponse.status}`);
@@ -86,18 +79,11 @@
             return null;
         }
     }
-    
-    // ============================================================================
-    // == LÓGICA DE NICKNAME E ORDEM DE CONSTRUÇÃO DINÂMICA ==
-    // ============================================================================
 
     function getCurrentGameAccount() {
         const world = window.location.hostname.split('.')[0];
         const nicknameElement = document.querySelector("#menu_row > td:nth-child(11) > table > tbody > tr:nth-child(1) > td > a");
-        if (!nicknameElement) {
-            console.warn("[TW Script] Seletor principal de nickname não encontrado.");
-            return null;
-        }
+        if (!nicknameElement) { return null; }
         const nickname = nicknameElement.textContent.trim();
         return { nickname: nickname, world: world, fullNickname: `${world} - ${nickname}` };
     }
@@ -105,74 +91,63 @@
     async function registerNickname() {
         try {
             const account = getCurrentGameAccount();
-            if (!account) throw new Error('Não foi possível detectar a conta do jogo.');
-            
+            if (!account) return;
             const idToken = await getFreshIdToken();
             if (!idToken) throw new Error('Não foi possível obter token para registrar nickname.');
-
             await new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'POST', url: `${API_BASE_URL}/api/nicknames/register`,
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
                     data: JSON.stringify({ nickname: account.fullNickname }),
-                    onload: res => (res.status >= 200 && res.status < 300) ? resolve(res) : reject(new Error(`Status: ${res.status}`)),
-                    onerror: err => reject(err)
+                    onload: res => (res.status < 300) ? resolve(res) : reject(new Error(`Status: ${res.status}`)),
+                    onerror: reject
                 });
             });
-            console.log(`[TW Script] Nickname '${account.fullNickname}' verificado/registrado na plataforma.`);
-        } catch (error) {
-            console.error('[TW Script ERROR] Falha ao registrar nickname:', error);
-        }
+            console.log(`[TW Script] Nickname '${account.fullNickname}' verificado.`);
+        } catch (error) { console.error('[TW Script ERROR] Falha ao registrar nickname:', error); }
     }
 
-     async function getDynamicBuildOrder() {
+    async function getDynamicBuildOrder() {
         const account = getCurrentGameAccount();
         if (!account) throw new Error("Não foi possível identificar a conta do jogo.");
 
         const cacheKey = `buildOrderCache_${account.fullNickname}`;
         const cachedData = GM_getValue(cacheKey, null);
-        const idToken = await getFreshIdToken();
-        if (!idToken) throw new Error("Não foi possível autenticar.");
 
         try {
-            // 1. Pergunta Leve ao servidor: Qual o ID do perfil ativo para este nickname?
+            const idToken = await getFreshIdToken();
+            if (!idToken) throw new Error("Não foi possível autenticar.");
+
             const statusResponse = await new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: `${API_BASE_URL}/api/active-profile-id/${encodeURIComponent(account.fullNickname)}`,
                     headers: { 'Authorization': `Bearer ${idToken}` },
-                    onload: res => resolve(res),
-                    onerror: err => reject(err)
+                    onload: resolve, onerror: reject
                 });
             });
 
-            if (statusResponse.status !== 200) {
-                 throw new Error(`Erro de status do servidor: ${statusResponse.status}`);
-            }
             const { activeProfileId } = JSON.parse(statusResponse.responseText);
 
-            // 2. Compara o ID do servidor com o ID salvo no cache.
             if (cachedData && cachedData.profileId === activeProfileId) {
                 console.log(`%c[TW Script] Perfil '${activeProfileId || 'Padrão'}' confirmado. Usando ordem do cache.`, 'color: orange; font-weight: bold;');
                 return cachedData.order;
             }
 
-            // 3. Se os IDs forem diferentes (ou não houver cache), busca a ordem completa.
             if (!activeProfileId) {
                 console.log("[TW Script] Nenhum perfil atribuído. Usando ordem padrão do script.");
                 const defaultOrder = getDefaultBuildOrder();
-                GM_setValue(cacheKey, { profileId: null, order: defaultOrder }); // Salva a info de que o padrão está em uso
+                GM_setValue(cacheKey, { profileId: null, order: defaultOrder });
                 return defaultOrder;
             }
 
-            console.log(`[TW Script] Mudança detectada para o perfil '${activeProfileId}'. Buscando nova ordem...`);
+            console.log(`[TW Script] Mudança detectada. Buscando nova ordem para o perfil: ${activeProfileId}`);
             const orderResponse = await new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: `${API_BASE_URL}/api/build-orders/${activeProfileId}`,
                     headers: { 'Authorization': `Bearer ${idToken}` },
-                    onload: res => resolve(res),
-                    onerror: err => reject(err)
+                    onload: resolve, onerror: reject
                 });
             });
 
@@ -180,8 +155,7 @@
 
             const data = JSON.parse(orderResponse.responseText);
             const newOrder = data.order.map(item => `main_buildlink_${item.building}_${item.level}`);
-            
-            // 4. Salva a nova ordem e o novo ID no cache para futuras comparações
+
             GM_setValue(cacheKey, { profileId: activeProfileId, order: newOrder });
             console.log(`%c[TW Script] Nova ordem de ${newOrder.length} passos carregada e salva no cache.`, 'color: lightgreen; font-weight: bold;');
             return newOrder;
@@ -190,6 +164,84 @@
             console.error("[TW Script ERROR] Falha na busca dinâmica. Usando ordem do cache (se disponível) ou padrão.", error);
             return cachedData ? cachedData.order : getDefaultBuildOrder();
         }
+    }
+
+    // --- FUNÇÕES DE LÓGICA DO JOGO ---
+
+    function esperarQuestlines(callback) {
+        const intervalo = setInterval(() => {
+            if (typeof unsafeWindow.Questlines !== 'undefined' && unsafeWindow.Questlines) {
+                clearInterval(intervalo);
+                callback();
+            }
+        }, 500);
+    }
+
+    function abrirRecompensas() {
+        if (typeof unsafeWindow.Questlines === 'undefined' || !unsafeWindow.Questlines) {
+            return;
+        }
+        unsafeWindow.Questlines.showDialog(0, 'main-tab');
+        setTimeout(() => {
+            unsafeWindow.Questlines.selectTabById('main-tab', 0);
+            setTimeout(coletarRecompensas, 1000);
+        }, 1000);
+    }
+
+    function coletarRecompensas() {
+        const botoes = document.querySelectorAll('#reward-system-rewards > tr > td:nth-child(6) > a:not(.btn-disabled)');
+        if (botoes.length === 0) {
+            setTimeout(simularEsc, 1000);
+        } else {
+            botoes.forEach(btn => btn.click());
+            setTimeout(simularEsc, 1500);
+        }
+    }
+
+    function simularEsc() {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
+    }
+
+    function executarEtapa1(){
+        if (getEvoluir_vilas() == Edificio_Principal){
+            setInterval(Proxima_Construcao, 2000);
+        } else if (getEvoluir_vilas() == Visualizacao_Geral){
+            document.querySelector("#l_main a")?.click();
+        }
+    }
+
+    function getEvoluir_vilas(){
+        let currentUrl = window.location.href;
+        if (currentUrl.includes("screen=overview")) return Visualizacao_Geral;
+        if (currentUrl.includes("screen=main")) return Edificio_Principal;
+        return null;
+    }
+
+    async function Proxima_Construcao(){
+        let proximoEdificio = await getConstrucao_proximo_edificio();
+        if (proximoEdificio) {
+            let isClickable = !proximoEdificio.classList.contains('btn-disabled');
+            if (isClickable) {
+                let delay = Math.floor(Math.random() * (Max_Tempo_Espera - Min_Tempo_Espera) + Min_Tempo_Espera);
+                setTimeout(() => proximoEdificio.click(), delay);
+            }
+        }
+    }
+
+    async function getConstrucao_proximo_edificio() {
+        let sequencia = await getDynamicBuildOrder();
+        for (const proximoId of sequencia) {
+            let elemento = document.getElementById(proximoId);
+            if (elemento) {
+                const nivelAtualMatch = elemento.querySelector('.build_options > span')?.textContent.match(/Nivel (\d+)/);
+                const nivelAtual = nivelAtualMatch ? parseInt(nivelAtualMatch[1]) : 0;
+                const nivelAlvo = parseInt(proximoId.split('_').pop());
+                if (nivelAtual < nivelAlvo) {
+                    return elemento;
+                }
+            }
+        }
+        return null;
     }
 
     function getDefaultBuildOrder() {
@@ -259,96 +311,42 @@
             "main_buildlink_main_29","main_buildlink_main_30"
         ];
     }
-    
-    // --- FUNÇÕES DO JOGO ---
-    function getBuildingName(buildingId) {
-        const buildingNames = { "main": "Edificio Principal", "wood": "Bosque", "stone": "Poço de Argila", "iron": "Mina de Ferro", "storage": "Armazém", "farm": "Fazenda", "barracks": "Quartel", "smith": "Ferreiro", "wall": "Muralha", "hide": "Esconderijo", "market": "Mercado", "statue": "Estatua", "place": "Praça de Reunião", "academy": "Academia", "stable": "Estábulo", "garage": "Oficina", "snob": "Academia de Nobres", "watchtower": "Torre de Vigia", "hospital": "Hospital", "church": "Igreja", "trade": "Posto de Trocas" };
-        const parts = buildingId.split('_');
-        return `${buildingNames[parts[2]] || parts[2]} Nv. ${parts[3]}`;
-    }
 
-    function esperarQuestlines(callback) {
-        const intervalo = setInterval(() => {
-            if (typeof unsafeWindow.Questlines !== 'undefined' && unsafeWindow.Questlines) {
-                clearInterval(intervalo);
-                callback();
-            }
-        }, 500);
-    }
-
-    function abrirRecompensas() {
-        const questIcon = document.querySelector('.daily-quests-icon:not(.completed-quests)');
-        if (questIcon) {
-            questIcon.click();
-            setTimeout(coletarRecompensas, 1000);
-        }
-    }
-
-    function coletarRecompensas() {
-        const collectButton = document.querySelector('.quest-popup-content .btn-collect');
-        if (collectButton) {
-            collectButton.click();
-            setTimeout(simularEsc, 500);
-        } else {
-            simularEsc();
-        }
-    }
-    
-    function simularEsc() {
-        document.dispatchEvent(new KeyboardEvent('keydown', { 'key': 'Escape' }));
-    }
-
-    async function getConstrucao_proximo_edificio() {
-        let sequencia = await getDynamicBuildOrder();
-        for (const proximoId of sequencia) {
-            let elemento = document.getElementById(proximoId);
-            if (elemento) {
-                const nivelAtualText = elemento.closest('tr').querySelector('td:first-child span')?.textContent || '';
-                const nivelAtualMatch = nivelAtualText.match(/Nível (\d+)/);
-                const nivelAtual = nivelAtualMatch ? parseInt(nivelAtualMatch[1]) : 0;
-                const nivelAlvo = parseInt(proximoId.split('_').pop());
-                if (nivelAtual < nivelAlvo) {
-                    return elemento;
-                }
-            }
-        }
-        return null;
-    }
-    
-    async function Proxima_Construcao(){
-        let proximoEdificio = await getConstrucao_proximo_edificio();
-        if (proximoEdificio && !proximoEdificio.classList.contains('btn-disabled')) {
-            let delay = Math.floor(Math.random() * (Max_Tempo_Espera - Min_Tempo_Espera) + Min_Tempo_Espera);
-            await sendBuildingAlert(proximoEdificio.id);
-            setTimeout(() => proximoEdificio.click(), delay);
-        }
-    }
-
-    function executarEtapa1(){
-        if (document.location.href.includes("screen=main")){
-            setInterval(Proxima_Construcao, 2000);
-        } else {
-            document.querySelector("#l_main a")?.click();
-        }
-    }
-    
     // --- PONTO DE ENTRADA DO SCRIPT ---
-    console.log("-- Script do Tribal Wars v0.2.0 ativado --");
+    console.log("-- Script do Tribal Wars v1.0.0 ativado --");
+
+    initializeFirebase();
     registerNickname();
 
-    if (Auto_Refresh_Ativado) { setInterval(() => location.reload(), Intervalo_Refresh_Minutos * 60 * 1000); }
-    esperarQuestlines(abrirRecompensas);
-    executarEtapa1();
+    if (Auto_Refresh_Ativado) {
+        setInterval(() => { location.reload(); }, Intervalo_Refresh_Minutos * 60 * 1000);
+    }
 
+    // CORREÇÃO: A coleta de recompensas é chamada aqui, no início.
+    esperarQuestlines(abrirRecompensas);
+
+    // A lógica de construção só roda se estivermos no Ed. Principal
+    if (document.location.href.includes("screen=main")) {
+        setInterval(Proxima_Construcao, 2500);
+    } else {
+        // Se não estiver, tenta navegar para lá (opcional, pode ser removido se preferir)
+        // document.querySelector("#l_main a")?.click();
+    }
+
+    // Lógica para "Completar Gratis"
     setInterval(() => {
         var tr = $('#buildqueue').find('tr').eq(1);
         if (tr.length > 0) {
             var timeSplit = tr.find('td').eq(1).find('span').eq(0).text().split(':');
             if (timeSplit.length >= 3 && (parseInt(timeSplit[0])*3600 + parseInt(timeSplit[1])*60 + parseInt(timeSplit[2])) < 180) {
                 tr.find('td').eq(2).find('a').eq(2).click();
-                setTimeout(() => $('.btn-confirm-yes').click(), 500);
+                setTimeout(() => {
+                    $('.btn-confirm-yes').click();
+                    // Coleta recompensas novamente após completar grátis
+                    setTimeout(abrirRecompensas, 1000);
+                }, 500);
             }
         }
-    }, 2000);
+    }, 3000);
 
 })();

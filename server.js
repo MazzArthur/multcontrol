@@ -103,6 +103,10 @@ app.get('/personalizar', (req, res) => {
     res.render('personalizar', { firebaseConfig: getFirebaseClientConfig() });
 });
 
+app.get('/atribuicoes', requireAuth, (req, res) => {
+    res.render('atribuicoes', { firebaseConfig: getFirebaseClientConfig() });
+});
+
 app.get('/admin-wpp', (req, res) => {
     // Esta rota agora não tem o 'requireAuth'. A verificação será feita na própria página.
     // Nós passamos o UID do admin para a página para que ela possa fazer a verificação.
@@ -340,7 +344,28 @@ app.get('/get_userscripts_with_token', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Erro interno ao gerar scripts.' });
     }
 });
+// --- NOVAS ROTAS PARA A PÁGINA DE ATRIBUIÇÕES ---
+app.get('/api/nicknames', requireAuth, async (req, res) => {
+    try {
+        const snapshot = await db.collection('users').doc(req.user.uid).collection('nicknames').get();
+        const nicknames = snapshot.docs.map(doc => doc.data());
+        res.status(200).json(nicknames);
+    } catch (error) { res.status(500).json({ error: 'Erro ao buscar nicknames.' }); }
+});
 
+app.get('/api/assignments', requireAuth, async (req, res) => {
+    try {
+        const userDoc = await db.collection('users').doc(req.user.uid).get();
+        res.status(200).json(userDoc.exists && userDoc.data().assignments ? userDoc.data().assignments : {});
+    } catch (error) { res.status(500).json({ error: 'Erro ao buscar atribuições.' }); }
+});
+
+app.post('/api/assignments', requireAuth, async (req, res) => {
+    try {
+        await db.collection('users').doc(req.user.uid).set({ assignments: req.body.assignments }, { merge: true });
+        res.status(200).json({ message: 'Atribuições salvas com sucesso!' });
+    } catch (error) { res.status(500).json({ error: 'Erro ao salvar atribuições.' }); }
+});
 // --- NOVA ROTA PARA REGISTRAR NICKNAMES ---
 app.post('/api/nicknames/register', requireAuth, async (req, res) => {
     const { nickname } = req.body;

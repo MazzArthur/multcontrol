@@ -103,7 +103,7 @@ app.get('/personalizar', (req, res) => {
     res.render('personalizar', { firebaseConfig: getFirebaseClientConfig() });
 });
 
-app.get('/atribuicoes', requireAuth, (req, res) => {
+app.get('/atribuicoes', (req, res) => {
     res.render('atribuicoes', { firebaseConfig: getFirebaseClientConfig() });
 });
 

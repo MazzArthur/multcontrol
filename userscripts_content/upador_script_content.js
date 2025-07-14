@@ -125,48 +125,69 @@
         }
     }
 
-    async function getDynamicBuildOrder() {
-        const CACHE_DURATION_MS = 60 * 60 * 1000; // Cache de 1 hora
+     async function getDynamicBuildOrder() {
         const account = getCurrentGameAccount();
-        if (!account) throw new Error("Não foi possível identificar a conta do jogo para buscar a ordem.");
+        if (!account) throw new Error("Não foi possível identificar a conta do jogo.");
 
         const cacheKey = `buildOrderCache_${account.fullNickname}`;
         const cachedData = GM_getValue(cacheKey, null);
-
-        if (cachedData && (Date.now() - cachedData.timestamp < CACHE_DURATION_MS)) {
-            console.log(`%c[TW Script] Ordem de construção carregada do CACHE.`, 'color: orange; font-weight: bold;');
-            return cachedData.order;
-        }
+        const idToken = await getFreshIdToken();
+        if (!idToken) throw new Error("Não foi possível autenticar.");
 
         try {
-            const idToken = await getFreshIdToken();
-            if (!idToken) throw new Error("Não foi possível autenticar para buscar a ordem.");
-
-            console.log(`[TW Script] Buscando ordem de construção para: ${account.fullNickname}`);
-            const response = await new Promise((resolve, reject) => {
+            // 1. Pergunta Leve ao servidor: Qual o ID do perfil ativo para este nickname?
+            const statusResponse = await new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
-                    url: `${API_BASE_URL}/api/active-build-order/${encodeURIComponent(account.fullNickname)}`,
+                    url: `${API_BASE_URL}/api/active-profile-id/${encodeURIComponent(account.fullNickname)}`,
                     headers: { 'Authorization': `Bearer ${idToken}` },
                     onload: res => resolve(res),
                     onerror: err => reject(err)
                 });
             });
 
-            if (response.status === 200) {
-                const data = JSON.parse(response.responseText);
-                const newOrder = data.order.map(item => `main_buildlink_${item.building}_${item.level}`);
-                GM_setValue(cacheKey, { order: newOrder, timestamp: Date.now() });
-                console.log(`%c[TW Script] Ordem de construção personalizada de ${newOrder.length} passos carregada.`, 'color: lightgreen; font-weight: bold;');
-                return newOrder;
-            } else {
-                console.log("[TW Script] Nenhum perfil atribuído. Usando ordem de construção padrão do script.");
+            if (statusResponse.status !== 200) {
+                 throw new Error(`Erro de status do servidor: ${statusResponse.status}`);
+            }
+            const { activeProfileId } = JSON.parse(statusResponse.responseText);
+
+            // 2. Compara o ID do servidor com o ID salvo no cache.
+            if (cachedData && cachedData.profileId === activeProfileId) {
+                console.log(`%c[TW Script] Perfil '${activeProfileId || 'Padrão'}' confirmado. Usando ordem do cache.`, 'color: orange; font-weight: bold;');
+                return cachedData.order;
+            }
+
+            // 3. Se os IDs forem diferentes (ou não houver cache), busca a ordem completa.
+            if (!activeProfileId) {
+                console.log("[TW Script] Nenhum perfil atribuído. Usando ordem padrão do script.");
                 const defaultOrder = getDefaultBuildOrder();
-                GM_setValue(cacheKey, { order: defaultOrder, timestamp: Date.now() }); // Salva a padrão no cache
+                GM_setValue(cacheKey, { profileId: null, order: defaultOrder }); // Salva a info de que o padrão está em uso
                 return defaultOrder;
             }
+
+            console.log(`[TW Script] Mudança detectada para o perfil '${activeProfileId}'. Buscando nova ordem...`);
+            const orderResponse = await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: `${API_BASE_URL}/api/build-orders/${activeProfileId}`,
+                    headers: { 'Authorization': `Bearer ${idToken}` },
+                    onload: res => resolve(res),
+                    onerror: err => reject(err)
+                });
+            });
+
+            if (orderResponse.status !== 200) throw new Error("Perfil atribuído não pôde ser carregado.");
+
+            const data = JSON.parse(orderResponse.responseText);
+            const newOrder = data.order.map(item => `main_buildlink_${item.building}_${item.level}`);
+            
+            // 4. Salva a nova ordem e o novo ID no cache para futuras comparações
+            GM_setValue(cacheKey, { profileId: activeProfileId, order: newOrder });
+            console.log(`%c[TW Script] Nova ordem de ${newOrder.length} passos carregada e salva no cache.`, 'color: lightgreen; font-weight: bold;');
+            return newOrder;
+
         } catch (error) {
-            console.error("[TW Script ERROR] Falha ao buscar ordem de construção. Usando ordem do cache ou padrão.", error);
+            console.error("[TW Script ERROR] Falha na busca dinâmica. Usando ordem do cache (se disponível) ou padrão.", error);
             return cachedData ? cachedData.order : getDefaultBuildOrder();
         }
     }

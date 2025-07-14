@@ -98,16 +98,11 @@
 
     async function registerNickname() {
         try {
-            const nicknameElement = getNickname();
-            if (!nicknameElement) {
-                console.log('[TW Script] Elemento do nickname nao encontrado.');
+            const fullNickname = getNickname();
+            if (!fullNickname || typeof fullNickname !== 'string') {
+                console.log('[TW Script] Nickname não encontrado ou inválido.');
                 return;
             }
-
-            const nickname = nicknameElement.textContent.trim();
-            const world = window.location.hostname.split('.')[0];
-            const fullNickname = `${world} - ${nickname}`;
-
             console.log(`[TW Script] Nickname detectado: ${fullNickname}. Registrando...`);
 
             const idToken = await getFreshIdToken();

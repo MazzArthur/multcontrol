@@ -303,7 +303,7 @@
     
     // --- PONTO DE ENTRADA DO SCRIPT ---
     console.log("-- Script do Tribal Wars v0.2.0 ativado --");
-    await registerNickname();
+    registerNickname();
 
     if (Auto_Refresh_Ativado) { setInterval(() => location.reload(), Intervalo_Refresh_Minutos * 60 * 1000); }
     esperarQuestlines(abrirRecompensas);

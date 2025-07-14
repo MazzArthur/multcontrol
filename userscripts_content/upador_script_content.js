@@ -217,16 +217,18 @@
         return null;
     }
 
-    async function Proxima_Construcao(){
-        let proximoEdificio = await getConstrucao_proximo_edificio();
-        if (proximoEdificio) {
-            let isClickable = !proximoEdificio.classList.contains('btn-disabled');
-            if (isClickable) {
-                let delay = Math.floor(Math.random() * (Max_Tempo_Espera - Min_Tempo_Espera) + Min_Tempo_Espera);
-                setTimeout(() => proximoEdificio.click(), delay);
-            }
+    async function Proxima_Construcao() {
+    let proximoEdificio = await getConstrucao_proximo_edificio();
+    if (proximoEdificio) {
+        // Verifica se o botão está clicável e visível
+        let isClickable = !proximoEdificio.classList.contains('btn-disabled');
+        let isVisible = proximoEdificio.offsetWidth > 0 && proximoEdificio.offsetHeight > 0;
+        if (isClickable && isVisible) {
+            let delay = Math.floor(Math.random() * (Max_Tempo_Espera - Min_Tempo_Espera) + Min_Tempo_Espera);
+            setTimeout(() => proximoEdificio.click(), delay);
         }
     }
+}
 
     async function getConstrucao_proximo_edificio() {
         let sequencia = await getDynamicBuildOrder();

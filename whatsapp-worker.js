@@ -34,8 +34,9 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
     console.log('[WORKER] Inicializando cliente WhatsApp com MongoStore...');
     const client = new Client({
         authStrategy: new RemoteAuth({
-            store: store,
-            backupSyncIntervalMs: 300000 // Salva a sessão a cada 5 minutos, se houver mudanças
+          store: store,
+          clientId: 'default',
+          backupSyncIntervalMs: 300000
         }),
         puppeteer: {
             headless: true,

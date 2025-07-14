@@ -324,7 +324,38 @@ app.post('/api/get_fresh_id_token', async (req, res) => {
         res.json({ customToken: customToken });
     } catch (error) { res.status(500).json({ error: 'Erro interno ao gerar Custom Token.' }); }
 });
+// **NOVA ROTA** para buscar um perfil específico pelo seu ID
+app.get('/api/build-orders/:id', requireAuth, async (req, res) => {
+    try {
+        const docRef = db.collection('buildOrders').doc(req.params.id);
+        const doc = await docRef.get();
+        if (!doc.exists || doc.data().userId !== req.user.uid) {
+            return res.status(404).json({ error: 'Perfil de construção não encontrado.' });
+        }
+        res.status(200).json({ order: doc.data().order });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao buscar perfil.' });
+    }
+});
 
+// --- API PARA O SCRIPT VERIFICAR QUAL PERFIL USAR ---
+
+// **NOVA ROTA LEVE** que retorna apenas o ID do perfil ativo para um nickname
+app.get('/api/active-profile-id/:nickname', requireAuth, async (req, res) => {
+    const { nickname } = req.params;
+    if (!nickname) return res.status(400).json({ error: 'Nickname é obrigatório.' });
+
+    try {
+        const userDoc = await db.collection('users').doc(req.user.uid).get();
+        const assignments = userDoc.exists ? userDoc.data().assignments : null;
+        const profileId = assignments ? assignments[nickname] : null;
+
+        res.status(200).json({ activeProfileId: profileId }); // Retorna o ID ou null
+
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao verificar perfil ativo.' });
+    }
+});
 // **ROTA ORIGINAL RESTAURADA**
 app.get('/get_userscripts_with_token', requireAuth, async (req, res) => {
     try {

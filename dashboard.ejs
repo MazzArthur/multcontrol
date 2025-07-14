@@ -465,24 +465,35 @@
                 // Carrega as configurações assim que o usuário é confirmado
                 loadUserSettings();
         
-                saveWhatsappBtn.addEventListener('click', async () => {
-                    const number = whatsappInput.value.trim();
-                    if (!/^\d{12,13}$/.test(number)) {
-                        alert('Número de WhatsApp inválido. Use o formato 55DDD9XXXXXXXX.');
-                        return;
-                    }
-                    saveWhatsappBtn.disabled = true;
-                    saveWhatsappBtn.textContent = 'Salvando...';
-                    try {
-                        await apiRequest('user/settings', 'POST', { whatsappNumber: number });
-                        alert('Número salvo com sucesso!');
-                    } catch (error) {
-                        alert('Erro ao salvar o número. Tente novamente.');
-                    } finally {
-                        saveWhatsappBtn.disabled = false;
-                        saveWhatsappBtn.textContent = 'Salvar Número';
-                    }
-                });
+                // --- Lógica do Botão Salvar ATUALIZADA ---
+                    saveSettingsBtn.addEventListener('click', async () => {
+                        const number = whatsappInput.value.trim();
+                        const webhookUrl = discordInput.value.trim();
+            
+                        if (number && !/^\d{12,13}$/.test(number)) {
+                            alert('Número de WhatsApp inválido. Use o formato 55DDD9XXXXXXXX ou deixe em branco.');
+                            return;
+                        }
+                        if (webhookUrl && !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+                            alert('URL do Webhook do Discord parece inválida. Verifique a URL copiada.');
+                            return;
+                        }
+            
+                        saveSettingsBtn.disabled = true;
+                        saveSettingsBtn.textContent = 'Salvando...';
+                        try {
+                            await apiRequest('user/settings', 'POST', { 
+                                whatsappNumber: number,
+                                discordWebhookUrl: webhookUrl
+                            });
+                            alert('Configurações salvas com sucesso!');
+                        } catch (error) {
+                            alert('Erro ao salvar as configurações. Tente novamente.');
+                        } finally {
+                            saveSettingsBtn.disabled = false;
+                            saveSettingsBtn.textContent = 'Salvar Configurações';
+                        }
+                    });
 
                     // Fetch scripts
                     try {

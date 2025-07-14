@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atribuir Perfis - MULTCONTROL</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: 'Roboto', sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
+        .navbar { background-color: #2c3e50; width: 100%; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .navbar-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: flex-start; }
+        .navbar a { float: left; color: white; text-align: center; padding: 14px 20px; text-decoration: none; font-size: 17px; font-weight: bold; }
+        .navbar a:hover { background-color: #3498db; }
+        .navbar a.active { background-color: #2980b9; }
+        .main-container { max-width: 900px; margin: 30px auto; padding: 30px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 25px; }
+        .assignment-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #e0e0e0; gap: 20px;}
+        .assignment-row:last-child { border-bottom: none; }
+        .nickname-label { font-size: 1.1em; font-weight: bold; color: #34495e; }
+        .profile-select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1em; min-width: 250px; }
+        .save-btn { display: block; width: 100%; padding: 15px; margin-top: 30px; background-color: #28a745; color: white; border: none; border-radius: 5px; font-size: 1.2em; font-weight: bold; cursor: pointer; transition: background-color 0.3s; }
+        .save-btn:hover:not(:disabled) { background-color: #218838; }
+        .save-btn:disabled { background-color: #a5d6a7; cursor: not-allowed; }
+        #loading-message, #no-nicknames-message { text-align: center; color: #777; font-size: 1.1em; padding: 20px; }
+        #status-message { text-align: center; font-weight: bold; color: green; height: 20px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/dashboard.html">Dashboard</a>
+            <a href="/personalizar">Perfis de Construção</a>
+            <a href="/atribuicoes" class="active">Atribuir Perfis</a>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <h1>Atribuir Perfil de Construção por Conta</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+            Aqui você pode definir qual perfil de construção será usado para cada uma das suas contas do jogo. O script usará a configuração salva aqui automaticamente.
+        </p>
+
+        <div id="assignments-container"></div>
+        <div id="loading-message"><p>Carregando seus dados...</p></div>
+        <div id="no-nicknames-message" style="display: none;"><p>Nenhuma conta de jogo foi detectada. Execute o script upador em uma de suas contas para registrá-la.</p></div>
+        <button id="save-assignments-btn" class="save-btn" style="display: none;">Salvar Atribuições</button>
+        <div id="status-message"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadingMessage = document.getElementById('loading-message');
+            const assignmentsContainer = document.getElementById('assignments-container');
+            const noNicknamesMessage = document.getElementById('no-nicknames-message');
+            const saveBtn = document.getElementById('save-assignments-btn');
+            const statusMessage = document.getElementById('status-message');
+
+            async function apiRequest(endpoint, method = 'GET', body = null) {
+                if (!auth.currentUser) throw new Error('Usuário não autenticado.');
+                const idToken = await auth.currentUser.getIdToken();
+                const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
+                if (body) options.body = JSON.stringify(body);
+                const response = await fetch(`/api/${endpoint}`, options);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Falha na requisição à API.');
+                }
+                return response.status !== 204 ? await response.json() : null;
+            }
+
+            function renderAssignments(nicknames, profiles, currentAssignments) {
+                assignmentsContainer.innerHTML = '';
+                if (nicknames.length === 0) {
+                    noNicknamesMessage.style.display = 'block';
+                    saveBtn.style.display = 'none';
+                    return;
+                }
+
+                nicknames.forEach(nickname => {
+                    const row = document.createElement('div');
+                    row.className = 'assignment-row';
+
+                    const label = document.createElement('label');
+                    label.className = 'nickname-label';
+                    label.textContent = nickname.name;
+                    label.htmlFor = `select-${nickname.name}`;
+
+                    const select = document.createElement('select');
+                    select.className = 'profile-select';
+                    select.id = `select-${nickname.name}`;
+                    select.dataset.nickname = nickname.name;
+
+                    // Opção padrão
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = ''; // Valor vazio para "nenhum"
+                    defaultOption.textContent = '--- Padrão do Script ---';
+                    select.appendChild(defaultOption);
+
+                    // Preenche com os perfis salvos
+                    profiles.forEach(profile => {
+                        const option = document.createElement('option');
+                        option.value = profile.id;
+                        option.textContent = profile.profileName;
+                        select.appendChild(option);
+                    });
+
+                    // Seleciona o valor salvo anteriormente
+                    if (currentAssignments[nickname.name]) {
+                        select.value = currentAssignments[nickname.name];
+                    }
+
+                    row.appendChild(label);
+                    row.appendChild(select);
+                    assignmentsContainer.appendChild(row);
+                });
+
+                saveBtn.style.display = 'block';
+            }
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    try {
+                        // Busca todos os dados necessários em paralelo
+                        const [nicknames, profiles, currentAssignments] = await Promise.all([
+                            apiRequest('nicknames'),
+                            apiRequest('build-orders'),
+                            apiRequest('assignments')
+                        ]);
+                        
+                        loadingMessage.style.display = 'none';
+                        renderAssignments(nicknames, profiles, currentAssignments || {});
+
+                    } catch (error) {
+                        loadingMessage.textContent = `Erro ao carregar dados: ${error.message}`;
+                    }
+                } else {
+                    window.location.href = '/';
+                }
+            });
+
+            saveBtn.addEventListener('click', async () => {
+                const selects = document.querySelectorAll('.profile-select');
+                const assignments = {};
+                selects.forEach(select => {
+                    if (select.value) { // Só salva se um perfil for selecionado
+                        assignments[select.dataset.nickname] = select.value;
+                    }
+                });
+                
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Salvando...';
+                try {
+                    await apiRequest('assignments', 'POST', { assignments });
+                    statusMessage.textContent = "Atribuições salvas com sucesso!";
+                    setTimeout(() => statusMessage.textContent = '', 3000);
+                } catch (error) {
+                    statusMessage.style.color = 'red';
+                    statusMessage.textContent = `Erro ao salvar: ${error.message}`;
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Salvar Atribuições';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

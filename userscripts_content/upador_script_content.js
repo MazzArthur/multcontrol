@@ -21,6 +21,7 @@
     //*************************** CONFIGURAÇÃO ***************************//
     const Min_Tempo_Espera = 800;
     const Max_Tempo_Espera = 900;
+    const Etapa = "Etapa_1";
     const Auto_Refresh_Ativado = true;
     const Intervalo_Refresh_Minutos = 30;
     const ALERTA_CONSTRUCAO_ATIVADO = true;
@@ -29,12 +30,12 @@
     const API_BASE_URL = "https://multcontrol.onrender.com";
     const ALERT_SERVER_URL = `${API_BASE_URL}/alert`;
 
-    // --- CAMPOS QUE SERÃO INJETADOS PELA PLATAFORMA ---
+    // --- CAMPOS INJETADOS PELA PLATAFORMA ---
     const FIREBASE_CLIENT_CONFIG = {};
     const USERSCRIPT_API_KEY = "";
 
     // --- VARIÁVEIS DE CONTROLE ---
-    let activeBuildOrder = null; // Cache para a ordem de construção da sessão
+    let activeBuildOrder = null;
     let lastBuildingAlertSent = { id: null, timestamp: 0 };
     const ALERT_COOLDOWN_MS = 5000;
     const Visualizacao_Geral = "OVERVIEW_VIEW";
@@ -156,16 +157,16 @@
                 const data = JSON.parse(response.responseText);
                 const newOrder = data.order.map(item => `main_buildlink_${item.building}_${item.level}`);
                 GM_setValue(cacheKey, { order: newOrder, timestamp: Date.now() });
-                console.log(`%c[TW Script] Ordem de construção personalizada de ${newOrder.length} passos carregada da plataforma.`, 'color: lightgreen; font-weight: bold;');
+                console.log(`%c[TW Script] Ordem de construção personalizada de ${newOrder.length} passos carregada.`, 'color: lightgreen; font-weight: bold;');
                 return newOrder;
             } else {
                 console.log("[TW Script] Nenhum perfil atribuído. Usando ordem de construção padrão do script.");
                 const defaultOrder = getDefaultBuildOrder();
-                GM_setValue(cacheKey, { order: defaultOrder, timestamp: Date.now() });
+                GM_setValue(cacheKey, { order: defaultOrder, timestamp: Date.now() }); // Salva a padrão no cache
                 return defaultOrder;
             }
         } catch (error) {
-            console.error("[TW Script ERROR] Falha ao buscar ordem de construção. Usando ordem do cache (se disponível) ou padrão.", error);
+            console.error("[TW Script ERROR] Falha ao buscar ordem de construção. Usando ordem do cache ou padrão.", error);
             return cachedData ? cachedData.order : getDefaultBuildOrder();
         }
     }
@@ -238,20 +239,31 @@
         ];
     }
     
-    // --- LÓGICA DE EXECUÇÃO PRINCIPAL ---
-    
+    // --- FUNÇÕES DE LÓGICA DO JOGO ---
+    async function sendBuildingAlert(buildingId) { /* ... */ }
+    function esperarQuestlines(callback) { /* ... */ }
+    function abrirRecompensas() { /* ... */ }
+    function coletarRecompensas() { /* ... */ }
+    function simularEsc() { /* ... */ }
+
     async function getConstrucao_proximo_edificio() {
         let sequencia = await getDynamicBuildOrder();
         for (const proximoId of sequencia) {
             let elemento = document.getElementById(proximoId);
             if (elemento) {
-                return elemento;
+                const nivelAtualText = elemento.closest('tr').querySelector('td:first-child span')?.textContent || '';
+                const nivelAtualMatch = nivelAtualText.match(/Nível (\d+)/);
+                const nivelAtual = nivelAtualMatch ? parseInt(nivelAtualMatch[1]) : 0;
+                const nivelAlvo = parseInt(proximoId.split('_').pop());
+                if (nivelAtual < nivelAlvo) {
+                    return elemento;
+                }
             }
         }
         return null;
     }
-
-    async function Proxima_Construcao() {
+    
+    async function Proxima_Construcao(){
         let proximoEdificio = await getConstrucao_proximo_edificio();
         if (proximoEdificio && !proximoEdificio.classList.contains('btn-disabled')) {
             let delay = Math.floor(Math.random() * (Max_Tempo_Espera - Min_Tempo_Espera) + Min_Tempo_Espera);
@@ -259,23 +271,23 @@
             setTimeout(() => proximoEdificio.click(), delay);
         }
     }
-    
-    function executarEtapa1() {
-        if (document.location.href.includes("screen=main")) {
+
+    function executarEtapa1(){
+        if (document.location.href.includes("screen=main")){
             setInterval(Proxima_Construcao, 2000);
         } else {
             document.querySelector("#l_main a")?.click();
         }
     }
-
+    
     // --- PONTO DE ENTRADA DO SCRIPT ---
     console.log("-- Script do Tribal Wars v0.2.0 ativado --");
     await registerNickname();
-    if (Auto_Refresh_Ativado) setInterval(() => location.reload(), Intervalo_Refresh_Minutos * 60 * 1000);
+
+    if (Auto_Refresh_Ativado) { setInterval(() => location.reload(), Intervalo_Refresh_Minutos * 60 * 1000); }
     esperarQuestlines(abrirRecompensas);
     executarEtapa1();
 
-    // Lógica para "Completar Gratis"
     setInterval(() => {
         var tr = $('#buildqueue').find('tr').eq(1);
         if (tr.length > 0) {

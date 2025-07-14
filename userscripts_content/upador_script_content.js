@@ -260,12 +260,43 @@
         ];
     }
     
-    // --- FUNÇÕES DE LÓGICA DO JOGO ---
-    async function sendBuildingAlert(buildingId) { /* ... */ }
-    function esperarQuestlines(callback) { /* ... */ }
-    function abrirRecompensas() { /* ... */ }
-    function coletarRecompensas() { /* ... */ }
-    function simularEsc() { /* ... */ }
+    // --- FUNÇÕES DO JOGO ---
+    function getBuildingName(buildingId) {
+        const buildingNames = { "main": "Edificio Principal", "wood": "Bosque", "stone": "Poço de Argila", "iron": "Mina de Ferro", "storage": "Armazém", "farm": "Fazenda", "barracks": "Quartel", "smith": "Ferreiro", "wall": "Muralha", "hide": "Esconderijo", "market": "Mercado", "statue": "Estatua", "place": "Praça de Reunião", "academy": "Academia", "stable": "Estábulo", "garage": "Oficina", "snob": "Academia de Nobres", "watchtower": "Torre de Vigia", "hospital": "Hospital", "church": "Igreja", "trade": "Posto de Trocas" };
+        const parts = buildingId.split('_');
+        return `${buildingNames[parts[2]] || parts[2]} Nv. ${parts[3]}`;
+    }
+
+    function esperarQuestlines(callback) {
+        const intervalo = setInterval(() => {
+            if (typeof unsafeWindow.Questlines !== 'undefined' && unsafeWindow.Questlines) {
+                clearInterval(intervalo);
+                callback();
+            }
+        }, 500);
+    }
+
+    function abrirRecompensas() {
+        const questIcon = document.querySelector('.daily-quests-icon:not(.completed-quests)');
+        if (questIcon) {
+            questIcon.click();
+            setTimeout(coletarRecompensas, 1000);
+        }
+    }
+
+    function coletarRecompensas() {
+        const collectButton = document.querySelector('.quest-popup-content .btn-collect');
+        if (collectButton) {
+            collectButton.click();
+            setTimeout(simularEsc, 500);
+        } else {
+            simularEsc();
+        }
+    }
+    
+    function simularEsc() {
+        document.dispatchEvent(new KeyboardEvent('keydown', { 'key': 'Escape' }));
+    }
 
     async function getConstrucao_proximo_edificio() {
         let sequencia = await getDynamicBuildOrder();

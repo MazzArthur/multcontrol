@@ -98,7 +98,7 @@
 
     async function registerNickname() {
         try {
-            const nicknameElement = document.querySelector('#user_info .name a');
+            const nicknameElement = getNickname();
             if (!nicknameElement) {
                 console.log('[TW Script] Elemento do nickname nao encontrado.');
                 return;

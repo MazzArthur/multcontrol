@@ -136,16 +136,14 @@ app.get('/api/user/settings', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Erro ao buscar configurações.' });
     }
 });
-
+// --- API DE CONFIGURAÇÃO DE ALERTAS ---
 app.post('/api/user/settings', requireAuth, async (req, res) => {
-    const { whatsappNumber } = req.body;
-    if (!whatsappNumber) {
-        return res.status(400).json({ error: 'Número de WhatsApp é obrigatório.' });
-    }
+    const { whatsappNumber, discordWebhookUrl } = req.body;
     try {
-        // 'set' com 'merge: true' cria o documento se não existir ou atualiza o campo se existir
+        // Salva ambos os campos. Se um for vazio, ele salva uma string vazia.
         await db.collection('users').doc(req.user.uid).set({
-            whatsappNumber: whatsappNumber
+            whatsappNumber: whatsappNumber || '',
+            discordWebhookUrl: discordWebhookUrl || ''
         }, { merge: true });
         res.status(200).json({ message: 'Configurações salvas com sucesso.' });
     } catch (error) {
@@ -241,7 +239,6 @@ app.post('/api/generate-custom-script', requireAuth, async (req, res) => {
 });
 
 
-// --- ROTAS DE AUTENTICAÇÃO E ALERTA DOS SCRIPTS ---
 app.post('/alert', async (req, res) => {
     const { message } = req.body;
     const authToken = req.headers.authorization?.split('Bearer ')[1] || null;
@@ -251,6 +248,7 @@ app.post('/alert', async (req, res) => {
         const decodedToken = await admin.auth().verifyIdToken(authToken);
         const userId = decodedToken.uid;
         
+        // Salva o alerta no Firestore
         await db.collection('alerts').add({
             message: message,
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -258,28 +256,47 @@ app.post('/alert', async (req, res) => {
             userEmail: decodedToken.email || 'N/A'
         });
 
+        // Verifica se é um alerta que deve gerar notificação
         if (message.toUpperCase().includes('CAPTCHA') || message.toUpperCase().includes('ATAQUE')) {
             const userDoc = await db.collection('users').doc(userId).get();
-            if (userDoc.exists && userDoc.data().whatsappNumber) {
-                const userPhoneNumber = userDoc.data().whatsappNumber;
-                const workerUrl = process.env.WHATSAPP_WORKER_URL;
-                if (workerUrl) {
-                    
-                    // --- LÓGICA DE RANDOMIZAÇÃO ADICIONADA ---
+            
+            // Se o usuário não tiver um documento de configurações, não faz nada
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+
+                // --- Lógica de Notificação por WhatsApp ---
+                if (userData.whatsappNumber && process.env.WHATSAPP_WORKER_URL) {
                     const headers = [
-                        "🚨 ALERTA MULTCONTROL 🚨",
-                        "⚠️ AVISO IMPORTANTE ⚠️",
-                        "🔔 Notificação do Sistema 🔔",
-                        "‼️ ATENÇÃO NECESSÁRIA ‼️"
+                        "🚨 ALERTA MULTCONTROL 🚨", "⚠️ AVISO IMPORTANTE ⚠️",
+                        "🔔 Notificação do Sistema 🔔", "‼️ ATENÇÃO NECESSÁRIA ‼️"
                     ];
                     const randomHeader = headers[Math.floor(Math.random() * headers.length)];
                     const finalMessage = `${randomHeader}\n\n${message}`;
-                    // --- FIM DA LÓGICA ---
-
-                    axios.post(`${workerUrl}/send-message`, {
-                        number: userPhoneNumber,
-                        message: finalMessage // <-- Usa a mensagem randomizada
+                    
+                    axios.post(`${process.env.WHATSAPP_WORKER_URL}/send-message`, {
+                        number: userData.whatsappNumber,
+                        message: finalMessage
                     }).catch(err => console.error("[SERVER ERROR] Erro ao se comunicar com o WhatsApp Worker:", err.message));
+                }
+
+                // --- NOVA LÓGICA DE NOTIFICAÇÃO POR DISCORD ---
+                if (userData.discordWebhookUrl) {
+                    console.log(`[SERVER] Enviando notificação para o Discord do usuário ${userId}.`);
+                    
+                    const isAttack = message.toUpperCase().includes('ATAQUE');
+                    const discordPayload = {
+                        // content: `<@${process.env.YOUR_DISCORD_USER_ID}>`, // Descomente e configure no .env para marcar você
+                        embeds: [{
+                            title: `🚨 Alerta: ${isAttack ? 'Ataque Recebido' : 'Captcha Necessário'}`,
+                            description: message,
+                            color: isAttack ? 15158332 : 16705372, // Vermelho para ataque, Amarelo para captcha
+                            timestamp: new Date().toISOString(),
+                            footer: { text: "MULTCONTROL Alertas" }
+                        }]
+                    };
+                    
+                    axios.post(userData.discordWebhookUrl, discordPayload)
+                         .catch(err => console.error("[SERVER ERROR] Erro ao enviar notificação para o Discord:", err.message));
                 }
             }
         }

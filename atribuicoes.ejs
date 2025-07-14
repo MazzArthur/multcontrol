@@ -44,23 +44,36 @@
     <div class="main-container">
         <h1>Atribuir Perfil de Construção por Conta</h1>
         <p style="text-align: center; color: #666; margin-bottom: 20px;">
-            Aqui você pode definir qual perfil de construção será usado para cada uma das suas contas do jogo. O script usará a configuração salva aqui automaticamente.
+            Aqui você define qual perfil de construção será usado para cada conta do jogo.
         </p>
 
         <div id="assignments-container"></div>
         <div id="loading-message"><p>Carregando seus dados...</p></div>
-        <div id="no-nicknames-message" style="display: none;"><p>Nenhuma conta de jogo foi detectada. Execute o script upador em uma de suas contas para registrá-la.</p></div>
+        <div id="no-nicknames-message" style="display: none;"><p>Nenhuma conta de jogo foi detectada. Execute o script upador em uma de suas contas para registrá-la aqui.</p></div>
         <button id="save-assignments-btn" class="save-btn" style="display: none;">Salvar Atribuições</button>
         <div id="status-message"></div>
     </div>
 
-    <script>
-        const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+<script>
+    const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-        document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Ponto de entrada: espera a confirmação do status de login
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // Se o usuário está logado, inicializa a lógica da página
+                initializeApp(user);
+            } else {
+                // Se não, bloqueia o acesso
+                document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
+            }
+        });
+
+        // Função principal que contém toda a lógica da página
+        async function initializeApp(user) {
             const loadingMessage = document.getElementById('loading-message');
             const assignmentsContainer = document.getElementById('assignments-container');
             const noNicknamesMessage = document.getElementById('no-nicknames-message');
@@ -68,8 +81,7 @@
             const statusMessage = document.getElementById('status-message');
 
             async function apiRequest(endpoint, method = 'GET', body = null) {
-                if (!auth.currentUser) throw new Error('Usuário não autenticado.');
-                const idToken = await auth.currentUser.getIdToken();
+                const idToken = await user.getIdToken();
                 const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
                 if (body) options.body = JSON.stringify(body);
                 const response = await fetch(`/api/${endpoint}`, options);
@@ -102,13 +114,11 @@
                     select.id = `select-${nickname.name}`;
                     select.dataset.nickname = nickname.name;
 
-                    // Opção padrão
                     const defaultOption = document.createElement('option');
-                    defaultOption.value = ''; // Valor vazio para "nenhum"
+                    defaultOption.value = '';
                     defaultOption.textContent = '--- Padrão do Script ---';
                     select.appendChild(defaultOption);
 
-                    // Preenche com os perfis salvos
                     profiles.forEach(profile => {
                         const option = document.createElement('option');
                         option.value = profile.id;
@@ -116,7 +126,6 @@
                         select.appendChild(option);
                     });
 
-                    // Seleciona o valor salvo anteriormente
                     if (currentAssignments[nickname.name]) {
                         select.value = currentAssignments[nickname.name];
                     }
@@ -129,32 +138,11 @@
                 saveBtn.style.display = 'block';
             }
 
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    try {
-                        // Busca todos os dados necessários em paralelo
-                        const [nicknames, profiles, currentAssignments] = await Promise.all([
-                            apiRequest('nicknames'),
-                            apiRequest('build-orders'),
-                            apiRequest('assignments')
-                        ]);
-                        
-                        loadingMessage.style.display = 'none';
-                        renderAssignments(nicknames, profiles, currentAssignments || {});
-
-                    } catch (error) {
-                        loadingMessage.textContent = `Erro ao carregar dados: ${error.message}`;
-                    }
-                } else {
-                    window.location.href = '/';
-                }
-            });
-
             saveBtn.addEventListener('click', async () => {
                 const selects = document.querySelectorAll('.profile-select');
                 const assignments = {};
                 selects.forEach(select => {
-                    if (select.value) { // Só salva se um perfil for selecionado
+                    if (select.value) { 
                         assignments[select.dataset.nickname] = select.value;
                     }
                 });
@@ -173,7 +161,22 @@
                     saveBtn.textContent = 'Salvar Atribuições';
                 }
             });
-        });
-    </script>
+
+            // Inicia o carregamento dos dados
+            try {
+                const [nicknames, profiles, currentAssignments] = await Promise.all([
+                    apiRequest('nicknames'),
+                    apiRequest('build-orders'),
+                    apiRequest('assignments')
+                ]);
+                
+                loadingMessage.style.display = 'none';
+                renderAssignments(nicknames, profiles, currentAssignments || {});
+            } catch (error) {
+                loadingMessage.textContent = `Erro ao carregar dados: ${error.message}`;
+            }
+        }
+    });
+</script>
 </body>
 </html>

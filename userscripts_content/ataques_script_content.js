@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Alerta de Ataques v2.0 - Auto-Update Inteligente
+// @name         Alerta de Ataques v2.1 - Auto-Update Inteligente
 // @icon         https://i.imgur.com/p5aYWUF.gif
 // @description  Verifica por novos ataques e envia alertas para a plataforma MULTCONTROL.
 // @author       MazzArthur & Gemini

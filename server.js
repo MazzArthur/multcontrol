@@ -69,21 +69,23 @@ function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {
     try {
         const filePath = path.resolve(__dirname, 'userscripts_content', fileName);
         let fileContent = fs.readFileSync(filePath, 'utf8');
-        const configPlaceholderRegex = /(const\s+FIREBASE_CLIENT_CONFIG\s*=\s*){};/;
-        const firebaseClientConfig = getFirebaseClientConfig(); 
+        
+        const firebaseClientConfig = getFirebaseClientConfig();
+        
+        // --- MUDANÇA AQUI: Procura pelos novos placeholders ---
+        const configPlaceholderRegex = /const\s+hardcodedConfig\s*=\s*{};/;
+        const keyPlaceholderRegex = /const\s+hardcodedApiKey\s*=\s*"";/;
+
+        // Injeta a configuração do Firebase
         if (configPlaceholderRegex.test(fileContent)) {
-            fileContent = fileContent.replace(configPlaceholderRegex, `$1${JSON.stringify(firebaseClientConfig)};`);
-        } else {
-            fileContent = `const FIREBASE_CLIENT_CONFIG = ${JSON.stringify(firebaseClientConfig)};\n` + fileContent;
+            fileContent = fileContent.replace(configPlaceholderRegex, `const hardcodedConfig = ${JSON.stringify(firebaseClientConfig)};`);
         }
-        const userscriptKeyPlaceholderRegex = /(const\s+USERSCRIPT_API_KEY\s*=\s*)"";/;
-        if (userscriptKeyPlaceholderRegex.test(fileContent)) {
-            fileContent = fileContent.replace(userscriptKeyPlaceholderRegex, `$1"${userscriptApiKeyToInject || 'CHAVE_AUSENTE'}";`);
+        
+        // Injeta a chave de API do script
+        if (keyPlaceholderRegex.test(fileContent)) {
+            fileContent = fileContent.replace(keyPlaceholderRegex, `const hardcodedApiKey = "${userscriptApiKeyToInject || ''}";`);
         }
-        const oldIdTokenPlaceholderRegex = /(const\s+FIREBASE_AUTH_ID_TOKEN\s*=\s*)[^;]*;/;
-        if (oldIdTokenPlaceholderRegex.test(fileContent)) {
-            fileContent = fileContent.replace(oldIdTokenPlaceholderRegex, `$1"";`);
-        }
+        
         return Buffer.from(fileContent).toString('base64');
     } catch (error) {
         console.error(`[SERVER ERROR] Falha ao processar o script ${fileName}:`, error);

@@ -176,6 +176,67 @@ app.get('/scripts/upador.user.js', (req, res) => {
         res.send(data);
     });
 });
+// Rota para o Tampermonkey verificar a VERSÃO do script de captcha
+app.get('/scripts/captcha.meta.js', (req, res) => {
+    // Define o caminho para o arquivo que contém o código do seu script de captcha
+    const filePath = path.join(__dirname, 'userscripts_content', 'captcha_script_content.js');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Erro ao ler o arquivo do script de captcha:', err);
+            return res.status(404).send('// Script not found');
+        }
+        // Extrai apenas o bloco de cabeçalho do UserScript
+        const headerMatch = data.match(/\/\/\s*==UserScript==[\s\S]+?\/\/\s*==\/UserScript==/);
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        // Envia apenas o cabeçalho ou uma mensagem de erro se não for encontrado
+        res.send(headerMatch ? headerMatch[0] : '// Header not found');
+    });
+});
+
+// Rota para o Tampermonkey BAIXAR a versão completa do script de captcha
+app.get('/scripts/captcha.user.js', (req, res) => {
+    // Define o caminho para o arquivo que contém o código do seu script de captcha
+    const filePath = path.join(__dirname, 'userscripts_content', 'captcha_script_content.js');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Erro ao ler o arquivo do script de captcha:', err);
+            return res.status(404).send('// Script not found');
+        }
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        // Envia o conteúdo completo do arquivo
+        res.send(data);
+    });
+});
+// Rota para o Tampermonkey verificar a VERSÃO do script de ataques
+app.get('/scripts/ataques.meta.js', (req, res) => {
+    // Define o caminho para o arquivo que contém o código do seu script de ataques
+    const filePath = path.join(__dirname, 'userscripts_content', 'ataques_script_content.js');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Erro ao ler o arquivo do script de ataques:', err);
+            return res.status(404).send('// Script not found');
+        }
+        // Extrai apenas o bloco de cabeçalho do UserScript
+        const headerMatch = data.match(/\/\/\s*==UserScript==[\s\S]+?\/\/\s*==\/UserScript==/);
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        // Envia apenas o cabeçalho ou uma mensagem de erro se não for encontrado
+        res.send(headerMatch ? headerMatch[0] : '// Header not found');
+    });
+});
+
+// Rota para o Tampermonkey BAIXAR a versão completa do script de ataques
+app.get('/scripts/ataques.user.js', (req, res) => {
+    // Define o caminho para o arquivo que contém o código do seu script de ataques
+    const filePath = path.join(__dirname, 'userscripts_content', 'ataques_script_content.js');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Erro ao ler o arquivo do script de ataques:', err);
+            return res.status(404).send('// Script not found');
+        }
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        // Envia o conteúdo completo do arquivo
+        res.send(data);
+    });
 // --- API DE GERENCIAMENTO DE ORDENS DE CONSTRUÇÃO ---
 app.get('/api/build-orders', requireAuth, async (req, res) => {
     try {

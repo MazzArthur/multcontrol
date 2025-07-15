@@ -4,7 +4,7 @@
 // @description  Verifica por novos ataques e envia alertas para a plataforma MULTCONTROL.
 // @author       MazzArthur & Gemini
 // @include      http*://*.*game.php*
-// @version      2.0.0
+// @version      2.1.0
 // @updateURL    https://multcontrol.onrender.com/scripts/ataques.meta.js
 // @downloadURL  https://multcontrol.onrender.com/scripts/ataques.user.js
 // @grant        GM_getValue

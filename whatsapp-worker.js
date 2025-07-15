@@ -7,7 +7,6 @@ const admin = require('firebase-admin');
 require('dotenv').config();
 
 // --- INICIALIZAÇÃO DOS SERVIÇOS ---
-
 // Firebase
 try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
@@ -34,8 +33,8 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
     const client = new Client({
         authStrategy: new RemoteAuth({
             store,
-            clientId: 'default', // MANTER FIXO para sessão persistir
-            backupSyncIntervalMs: 60000 // faz backup a cada 1 minuto
+            clientId: 'default',
+            backupSyncIntervalMs: 60000
         }),
         puppeteer: {
             headless: true,
@@ -105,44 +104,52 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
     });
 
     app.post('/send-message', async (req, res) => {
-    const { number, message } = req.body;
-    if (!number || !message) {
-        return res.status(400).json({ error: 'Número e mensagem são obrigatórios.' });
-    }
-
-    const chatId = `${number.replace(/\D/g, '')}@c.us`;
-    try {
-        const isRegistered = await client.isRegisteredUser(chatId);
-        if (!isRegistered) {
-            console.error(`[WORKER] ❌ Número não registrado no WhatsApp: ${number}`);
-            return res.status(404).json({ success: false, error: 'Número não tem WhatsApp.' });
+        const { number, message } = req.body;
+        if (!number || !message) {
+            return res.status(400).json({ error: 'Número e mensagem são obrigatórios.' });
         }
 
-        const chat = await client.getChatById(chatId);
-        await chat.sendStateTyping();
+        const chatId = `${number.replace(/\D/g, '')}@c.us`;
+        try {
+            const isRegistered = await client.isRegisteredUser(chatId);
+            if (!isRegistered) {
+                console.error(`[WORKER] ❌ Número não registrado no WhatsApp: ${number}`);
+                return res.status(404).json({ success: false, error: 'Número não tem WhatsApp.' });
+            }
 
-        const delay = Math.floor(Math.random() * 3000) + 1000;
-        setTimeout(async () => {
-            await client.sendMessage(chatId, {
-                text: message,
-                buttons: [
-                    {
-                        buttonId: 'botao_recebido',
-                        buttonText: { displayText: '✅ Recebido' },
-                        type: 1
-                    }
-                ],
-                footer: 'Toque no botão para confirmar',
-                headerType: 1
-            });
-            await chat.clearState();
-        }, delay);
+            const chat = await client.getChatById(chatId);
+            await chat.sendStateTyping();
 
-        res.status(200).json({ success: true, message: 'Ordem de envio recebida com botão.' });
+            const delay = Math.floor(Math.random() * 3000) + 1000;
+            setTimeout(async () => {
+                await client.sendMessage(chatId, {
+                    text: message,
+                    buttons: [
+                        {
+                            buttonId: 'botao_recebido',
+                            buttonText: { displayText: '✅ Recebido' },
+                            type: 1
+                        }
+                    ],
+                    footer: 'Toque no botão para confirmar',
+                    headerType: 1
+                });
+                await chat.clearState();
+            }, delay);
 
-    } catch (error) {
-        console.error(`[WORKER ERROR] ❌ Erro ao enviar mensagem para ${number}:`, error);
-        res.status(500).json({ success: false, error: 'Erro interno ao processar mensagem.' });
-    }
-});
+            res.status(200).json({ success: true, message: 'Ordem de envio recebida com botão.' });
+
+        } catch (error) {
+            console.error(`[WORKER ERROR] ❌ Erro ao enviar mensagem para ${number}:`, error);
+            res.status(500).json({ success: false, error: 'Erro interno ao processar mensagem.' });
+        }
+    });
+
+    // ✅ Inicia o servidor Express
+    app.listen(PORT, () => {
+        console.log(`[WORKER] 🌐 Servidor HTTP iniciado na porta ${PORT}`);
+    });
+
+}).catch(err => {
+    console.error('[WORKER ERROR] ❌ Falha ao conectar ao MongoDB:', err);
 });

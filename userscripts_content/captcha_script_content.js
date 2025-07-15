@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         Alerta de Captcha v1.0 (Atualizável)
-// @icon         https://i.imgur.com/7WgHTT8.gif
+// @name         Alerta de Captcha v1.1 - MultControl
+// @icon         https://i.imgur.com/p5aYWUF.gif
 // @description  Script para detectar e alertar sobre Captchas, com atualizações automáticas.
 // @author       MazzArthur
 // @include      http*://*.*game.php*
-// @version      1.0.0
+// @version      1.1.0
 // @updateURL    https://multcontrol.onrender.com/scripts/captcha.meta.js
 // @downloadURL  https://multcontrol.onrender.com/scripts/captcha.user.js
 // @grant        GM_getValue

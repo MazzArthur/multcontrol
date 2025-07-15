@@ -23,9 +23,15 @@ const db = admin.firestore();
 
 // Conexão com MongoDB
 console.log('[WORKER] ⏳ Conectando ao MongoDB...');
+
+const app = express();
+app.use(express.json());
+
+const PORT = process.env.PORT || 3001;
+
 mongoose.connect(process.env.MONGODB_URI).then(() => {
     console.log('[WORKER] ✅ Conectado ao MongoDB com sucesso.');
-    
+
     const store = new MongoStore({ mongoose: mongoose });
 
     // Inicialização do Cliente WhatsApp
@@ -42,7 +48,8 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
         }
     });
 
-    // QR Code
+    let clientReady = false;
+
     client.on('qr', async (qr) => {
         console.log('[WORKER] 📷 QR Code gerado.');
         try {
@@ -59,9 +66,16 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
 
     client.on('ready', async () => {
         console.log('[WORKER] ✅ Cliente WhatsApp conectado e pronto!');
+        clientReady = true;
+
         await db.collection('whatsapp_status').doc('session').set({
             status: 'CONNECTED',
             timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Só inicia o servidor após o cliente estar pronto
+        app.listen(PORT, () => {
+            console.log(`[WORKER] 🌐 Servidor HTTP iniciado na porta ${PORT}`);
         });
     });
 
@@ -89,32 +103,39 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
         }
     });
 
-    // Inicialização segura
     client.initialize().catch(err => console.error('[WORKER ERROR] ❌ Falha na inicialização:', err));
 
-    // API interna
-    const app = express();
-    app.use(express.json());
-
-    const PORT = process.env.PORT || 3001;
-
+    // Rota ping
     app.get('/ping', (req, res) => {
         console.log(`[WORKER] 📡 Ping recebido em: ${new Date().toISOString()}`);
         res.status(200).json({ status: 'ok', service: 'whatsapp-worker' });
     });
 
+    // Rota para enviar mensagem
     app.post('/send-message', async (req, res) => {
+        if (!clientReady) {
+            return res.status(503).json({ error: 'Cliente WhatsApp ainda não está pronto.' });
+        }
+
         const { number, message } = req.body;
         if (!number || !message) {
             return res.status(400).json({ error: 'Número e mensagem são obrigatórios.' });
         }
 
         const chatId = `${number.replace(/\D/g, '')}@c.us`;
+
         try {
+            // Verifica se o número tem WhatsApp
+            const numberId = await client.getNumberId(chatId);
+            if (!numberId) {
+                console.error(`[WORKER] ❌ Número inválido ou não registrado no WhatsApp: ${number}`);
+                return res.status(404).json({ success: false, error: 'Número não tem WhatsApp.' });
+            }
+
             const isRegistered = await client.isRegisteredUser(chatId);
             if (!isRegistered) {
                 console.error(`[WORKER] ❌ Número não registrado no WhatsApp: ${number}`);
-                return res.status(404).json({ success: false, error: 'Número não tem WhatsApp.' });
+                return res.status(404).json({ success: false, error: 'Número não está registrado.' });
             }
 
             const chat = await client.getChatById(chatId);
@@ -126,17 +147,12 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
                 await chat.clearState();
             }, delay);
 
-            res.status(200).json({ success: true, message: 'Ordem de envio recebida com botão.' });
+            res.status(200).json({ success: true, message: 'Mensagem enviada com sucesso.' });
 
         } catch (error) {
-            console.error(`[WORKER ERROR] ❌ Erro ao enviar mensagem para ${number}:`, error);
+            console.error(`[WORKER ERROR] ❌ Erro ao enviar mensagem para ${number}:`, error.stack || error);
             res.status(500).json({ success: false, error: 'Erro interno ao processar mensagem.' });
         }
-    });
-
-    // ✅ Inicia o servidor Express
-    app.listen(PORT, () => {
-        console.log(`[WORKER] 🌐 Servidor HTTP iniciado na porta ${PORT}`);
     });
 
 }).catch(err => {

@@ -8,353 +8,290 @@ nav<!DOCTYPE html>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* ================================= */
-        /* === ESTILOS DO NOVO MENU (NAVBAR) === */
-        /* ================================= */
-        .navbar {
-            background-color: #2c3e50;
-            width: 100%;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        /* Fonte local do tema medieval */
+        @font-face {
+            font-family: 'MedievalSharp';
+            src: url('MedievalSharp-Regular.ttf') format('truetype');
         }
-        .navbar-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: flex-start;
+    
+        /* Base fluida para o design */
+        html {
+            font-size: clamp(14px, 1.5vw + 0.5rem, 16px);
         }
-        .navbar a {
-            float: left;
-            color: white;
-            text-align: center;
-            padding: 14px 20px;
-            text-decoration: none;
-            font-size: 17px;
-            font-weight: bold;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        .navbar a:hover {
-            background-color: #3498db;
-            color: white;
-        }
-        .navbar a.active {
-            background-color: #2980b9;
-            color: white;
-        }
-
-        /* Seus estilos originais abaixo */
+    
         body {
-            font-family: 'Roboto', sans-serif;
             margin: 0;
-            padding: 0; /* Removido padding para o navbar ocupar toda a largura */
-            background-color: #f4f7f6;
-            color: #333;
+            padding: 0;
+            font-family: 'MedievalSharp', cursive;
+            font-size: 1rem;
+            color: #eee;
+            background: url('https://i.imgur.com/spPUGqP.png') repeat, #30221d;
+            background-size: cover;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
         }
-        header {
+    
+        /* --- Barra de Navegação (Navbar) --- */
+        .navbar {
+            background-color: rgba(25, 20, 18, 0.5);
+            backdrop-filter: blur(4px);
             width: 100%;
-            max-width: 1200px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(207, 163, 68, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .navbar-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            padding: 0 20px; /* Adicionado padding lateral */
-            box-sizing: border-box;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
+            height: 60px;
         }
-        header h1 {
-            color: #2c3e50;
-            margin: 0;
-            font-size: 2em;
-        }
-        .user-info {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 5px;
-        }
-        .user-info p {
-            margin: 0;
-            font-size: 0.9em;
-            color: #555;
-        }
-        .user-info p strong {
-            font-size: 1em;
-            color: #2c3e50;
-        }
-        button {
-            background-color: #FF5722;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #E64A19;
-        }
-        .script-generation-section {
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-            margin-bottom: 30px;
-            width: 100%;
-            max-width: 1200px;
-            box-sizing: border-box;
-        }
-        .script-generation-section h2 {
+        .navbar-left, .navbar-right { display: flex; align-items: center; gap: 20px; }
+        .navbar-logo { height: 40px; width: auto; }
+        .navbar a {
+            color: #fff8dc;
             text-align: center;
-            color: #34495e;
+            padding: 10px 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .navbar a:hover { background-color: rgba(207, 163, 68, 0.8); color: #111; }
+        .navbar a.active { background-color: #cfa344; color: #111; }
+        .navbar-user-info { display: flex; align-items: center; gap: 15px; }
+        .navbar-user-info p { margin: 0; font-size: 0.8em; color: #ccc; text-align: right; }
+        .navbar-user-info strong { color: #fff8dc; }
+        #logoutBtn {
+            background: rgba(198, 40, 40, 0.6);
+            border: 1px solid #D32F2F;
+            color: #fff8dc;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            font-family: 'MedievalSharp', cursive;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #logoutBtn:hover { background-color: rgba(211, 47, 47, 0.7); }
+        
+        /* --- ESTRUTURA DE 3 COLUNAS (GRID) --- */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: minmax(300px, 1fr) 2fr minmax(300px, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1600px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .main-content { grid-column: 2 / 3; display: flex; flex-direction: column; align-items: center; }
+        .sidebar-left { grid-column: 1 / 2; }
+        .sidebar-right { grid-column: 3 / 4; }
+        .main-content h1 {
+            font-family: 'MedievalSharp', cursive;
+            color: #fff8dc;
+            margin: 0 0 25px 0;
+            font-size: 2em;
+            text-align: center;
+        }
+        
+        /* ============================================== */
+        /* === ESTILO TRANSPARENTE APLICADO AOS PAINÉIS === */
+        /* ============================================== */
+        .panel, .script-generation-section, .alert-box {
+            font-family: 'MedievalSharp', cursive; /* Mantém a fonte do tema */
+            color: #eee; /* Cor de texto clara */
+            background: rgba(43, 30, 25, 0.25);
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(207, 163, 68, 0.3);
+            border-radius: 1rem;
+            box-shadow: 0 0 1.5rem rgba(0, 0, 0, 0.4);
+            padding: 1.5rem;
             margin-bottom: 20px;
-            border-bottom: 2px solid #eee;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        h2 {
+            color: #fff8dc;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(207, 163, 68, 0.5);
             padding-bottom: 10px;
         }
+        
+        /* --- Estilos para o conteúdo DENTRO dos painéis --- */
+        .settings-input-group input { 
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #cfa344;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.8);
+            color: #333;
+            font-family: 'Roboto', sans-serif; /* Fonte mais legível para inputs */
+        }
+        small { color: #ccc; }
+        
+        .script-generation-section p { font-size: 0.9em; text-align: center; margin-bottom: 20px; color: #ccc; }
         .script-type-box {
-            background-color: #e3f2fd;
-            border: 1px solid #90caf9;
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid rgba(207, 163, 68, 0.2);
             border-radius: 8px;
             padding: 15px 20px;
             margin-bottom: 15px;
-            position: relative;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
         }
-        .script-type-box strong {
-            color: #1976D2;
-            font-size: 1.1em;
-            display: block;
-            margin-bottom: 0;
-            flex-grow: 1;
-        }
-        .script-code-box {
-            display: none;
-            background-color: #f0f0f0;
-            border: 1px dashed #ccc;
-            padding: 10px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 0.8em;
-            white-space: pre-wrap;
-            overflow-x: auto;
-            max-height: 250px;
-            cursor: text;
-            width: 100%;
-            margin-top: 10px;
-        }
-        .copy-script-button {
-            background-color: #2196F3;
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8em;
-            margin-top: 0;
-            transition: background-color 0.2s;
-            flex-shrink: 0;
-        }
-        .copy-script-button:hover {
-            background-color: #1976D2;
-        }
-        .main-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            width: 100%;
-            max-width: 1200px;
-            justify-content: center;
-            align-items: flex-start;
-            flex-grow: 1;
-            padding: 0 20px; /* Adicionado padding lateral */
-            box-sizing: border-box;
-        }
-        .alert-box {
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            flex: 1;
-            min-width: 300px;
-            max-width: 380px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-        }
-        h2 {
-            color: #34495e;
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
+        .script-type-box strong { color: #f3d999; font-size: 1.1em; }
+        
+        .alerts-container { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; justify-content: center; }
+        .alert-box { flex: 1; min-width: 300px; }
         .alerts-list {
-            border: 1px solid #e0e0e0;
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid #444;
             border-radius: 6px;
-            min-height: 150px;
-            max-height: 300px;
+            min-height: 200px;
+            max-height: 400px;
             overflow-y: auto;
             padding: 15px;
-            background-color: #fafafa;
-            flex-grow: 1;
         }
         .alert-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 10px;
-            padding: 10px 15px;
-            background-color: #e3f2fd;
-            border-left: 5px solid #2196F3;
-            border-radius: 4px;
-            transition: transform 0.2s ease-in-out;
-            font-size: 0.9em;
+            padding: 10px 15px; margin-bottom: 10px; display: flex; align-items: flex-start;
+            border-radius: 4px; font-size: 0.9em; word-break: break-word;
         }
-        .alert-item.captcha {
-            border-left-color: #FFC107;
-            background-color: #FFFDE7;
-        }
-        .alert-item.build-order {
-            border-left-color: #4CAF50;
-            background-color: #E8F5E9;
-        }
-        .alert-item.attack-alert {
-            border-left-color: #D32F2F;
-            background-color: #FFEBEE;
-        }
-        .alert-item:last-child {
-            margin-bottom: 0;
-        }
-        .alert-item:hover {
-            transform: translateY(-2px);
-        }
-        .alert-item .timestamp {
-            font-weight: bold;
-            color: #1976D2;
-            margin-right: 10px;
-            flex-shrink: 0;
-            min-width: 65px;
-        }
+        .alert-item.captcha { border-left: 5px solid #FFC107; background-color: rgba(255, 224, 130, 0.1); }
+        .alert-item.build-order { border-left: 5px solid #4CAF50; background-color: rgba(139, 195, 74, 0.1); }
+        .alert-item.attack-alert { border-left: 5px solid #D32F2F; background-color: rgba(239, 154, 154, 0.1); }
+        .alert-item .timestamp { font-weight: bold; margin-right: 10px; }
         .alert-item.captcha .timestamp { color: #FFA000; }
         .alert-item.build-order .timestamp { color: #388E3C; }
         .alert-item.attack-alert .timestamp { color: #C62828; }
-        .alert-item .message {
-            flex-grow: 1;
-            word-break: break-word;
-            display: flex;
-            align-items: flex-start;
-        }
-        .alert-item .message .emoji-prefix {
-            margin-right: 5px;
-            font-size: 1.2em;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-        .no-alerts {
-            text-align: center;
-            color: #777;
-            padding: 20px;
-        }
+        .no-alerts { text-align: center; color: #888; padding: 20px; }
+        
         .alerts-list::-webkit-scrollbar { width: 8px; }
-        .alerts-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .alerts-list::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-        .alerts-list::-webkit-scrollbar-thumb:hover { background: #555; }
-        .panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; width: 100%; max-width: 1200px; box-sizing: border-box; }
-        .settings-input-group { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
-        .settings-input-group input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        .btn-save { background-color: #28a745; }
-        .btn-save:disabled { background-color: #ccc; }
+        .alerts-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        .alerts-list::-webkit-scrollbar-thumb { background: #cfa344; border-radius: 10px; }
+        
+        /* Estilo para botões dentro dos painéis */
+        .panel button, .script-generation-section button, #activateNotificationsBtn {
+            background: rgba(139, 90, 43, 0.7);
+            color: #fff8dc;
+            padding: 0.75rem 1rem;
+            border: 2px solid #cfa344;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        .panel button:hover, .script-generation-section button:hover, #activateNotificationsBtn:hover {
+            background-color: rgba(160, 82, 45, 0.8);
+            border-color: #f3d999;
+            transform: scale(1.05);
+        }
+        .panel .btn-save { background-color: rgba(65, 137, 68, 0.6); border-color: #4CAF50; }
+        .panel .btn-save:hover { background-color: rgba(76, 175, 80, 0.7); }
+    
+        /* --- Responsividade --- */
+        @media (max-width: 1024px) {
+            .dashboard-layout { grid-template-columns: 1fr; }
+            .main-content, .sidebar-left, .sidebar-right { grid-column: auto; }
+        }
+        @media (max-width: 768px) {
+            .navbar-container { flex-direction: column; height: auto; padding: 10px; }
+            .navbar-right { margin-top: 10px; }
+        }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-container">
-            <a href="/dashboard.html" class="active">Dashboard</a>
-            <a href="/personalizar">Perfis de Construção</a>
-            <a href="/atribuicoes">Atribuir Perfis</a>
+            <div class="navbar-left">
+                <img src="https://i.imgur.com/l957Jp1.png" alt="Logo" class="navbar-logo">
+                <a href="/dashboard.html" class="active">Dashboard</a>
+                <a href="/personalizar">Perfis</a>
+                <a href="/atribuicoes">Atribuir</a>
+            </div>
+            <div class="navbar-right">
+                <div class="navbar-user-info">
+                    <p id="userEmailDisplay"></p>
+                    <p>UID: <strong id="userUidDisplay"></strong></p>
+                    <button id="logoutBtn" class="medieval-style">Sair</button>
+                </div>
+            </div>
         </div>
     </nav>
+    
+    <div class="dashboard-layout">
+        <aside class="sidebar-left">
+            <div class="panel">
+                <h2>Configurações de Notificação</h2>
+                <div class="settings-input-group">
+                    <input type="tel" id="whatsapp-number-input" placeholder="Nº de WhatsApp (opcional)">
+                </div>
+                <div class="settings-input-group" style="margin-top: 15px;">
+                    <input type="text" id="discord-webhook-input" placeholder="URL do Webhook do Discord (opcional)">
+                </div>
+                <small>Preencha um ou ambos os campos para receber alertas.</small>
+                <button id="save-settings-btn" class="btn-save" style="margin-top: 15px; width:100%;">Salvar Configurações</button>
+                <button id="activateNotificationsBtn" style="margin-top: 20px; width:100%;">Ativar Notificações Desktop</button>
+            </div>
+        </aside>
 
-    <header>
-        <h1>🚨 Central de Alertas Tribal Wars 🚨</h1>
-        <div class="user-info">
-            <p id="userEmailDisplay"></p>
-            <p>UID: <strong id="userUidDisplay"></strong></p>
-            <button id="logoutBtn">Sair</button>
-        </div>
-    </header>
-    <div class="panel">
-            <h2>Configurações de Notificação</h2>
-            <div class="settings-input-group">
-                <input type="tel" id="whatsapp-number-input" placeholder="Nº de WhatsApp (opcional)">
+        <main class="main-content">
+            <h1>Central de Alertas</h1>
+            <div class="alerts-container">
+                <div class="alert-box captcha-box">
+                    <h2>Alertas de Captcha</h2>
+                    <div id="captchaAlertsList" class="alerts-list">
+                        <p class="no-alerts">Aguardando alertas de Captcha...</p>
+                    </div>
+                </div>
+                <div class="alert-box attack-box">
+                    <h2>Alertas de Ataque</h2>
+                    <div id="attackAlertsList" class="alerts-list">
+                        <p class="no-alerts">Aguardando alertas de ataque...</p>
+                    </div>
+                </div>
             </div>
-            <div class="settings-input-group" style="margin-top: 15px;">
-                <input type="text" id="discord-webhook-input" placeholder="URL do Webhook do Discord (opcional)">
-            </div>
-            <small>Preencha um ou ambos os campos para receber alertas.</small>
-            <button id="save-settings-btn" class="btn btn-save" style="margin-top: 15px;">Salvar Configurações</button>
-    </div>
-    <div class="script-generation-section">
-        <h2>Seus Scripts Personalizados (Copiar e Colar no Tampermonkey)</h2>
-        <p style="font-size: 0.9em; text-align: center; margin-bottom: 20px; color: #666;">
-            <strong>Instruções:</strong> Faça login aqui, copie o código completo de cada script abaixo, abra seu Tampermonkey (ou similar), crie um novo script e cole o código. Salve e ative o script no Tribal Wars.
-        </p>
-        <div class="script-type-box">
-            <strong>1. Script: Alerta de Captcha (FUSÃO FINAL E LIMPÍSSIMA)</strong>
-            <button class="copy-script-button" data-script-id="captchaScriptCode">Copiar</button>
-            <div class="script-code-box">
-                <code id="captchaScriptCode">Carregando script...</code>
-            </div>
-        </div>
-        <div class="script-type-box">
-            <strong>2. Script: Upador Automatico editado + Coleta Recompensa + Refresh Automático + Alerta de Construção</strong>
-            <button class="copy-script-button" data-script-id="upadorScriptCode">Copiar</button>
-            <div class="script-code-box">
-                <code id="upadorScriptCode">Carregando script...</code>
-            </div>
-        </div>
-        <div class="script-type-box">
-            <strong>3. Script: Alerta de Ataques (Tribal Wars)</strong>
-            <button class="copy-script-button" data-script-id="attackScriptCode">Copiar</button>
-            <div class="script-code-box">
-                <code id="attackScriptCode">Carregando script...</code>
-            </div>
-        </div>
-    </div>
+        </main>
 
-    <button id="activateNotificationsBtn" 
-            style="background-color: #4CAF50; margin-top: 20px; margin-bottom: 20px; padding: 10px 20px; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 1em; font-weight: bold;">
-        Ativar Notificações Desktop
-    </button>
-    <div class="main-container">
-        <div class="alert-box captcha-box">
-            <h2>Alertas de Captcha</h2>
-            <div id="captchaAlertsList" class="alerts-list">
-                <p class="no-alerts">Aguardando alertas de Captcha...</p>
+        <aside class="sidebar-right">
+            <div class="script-generation-section">
+                <h2>Seus Scripts Personalizados</h2>
+                <p style="font-size: 0.9em; text-align: center; margin-bottom: 20px;">
+                    <strong>Instruções:</strong> Copie, crie um novo script no Tampermonkey e cole.
+                </p>
+                <div class="script-type-box">
+                    <strong>1. Script: Alerta de Captcha</strong>
+                    <button class="copy-script-button" data-script-id="captchaScriptCode">Copiar</button>
+                </div>
+                <div class="script-type-box">
+                    <strong>2. Script: Upador e Coleta</strong>
+                    <button class="copy-script-button" data-script-id="upadorScriptCode">Copiar</button>
+                </div>
+                <div class="script-type-box">
+                    <strong>3. Script: Alerta de Ataques</strong>
+                    <button class="copy-script-button" data-script-id="attackScriptCode">Copiar</button>
+                </div>
+                <div style="display:none;">
+                    <code id="captchaScriptCode"></code><code id="upadorScriptCode"></code><code id="attackScriptCode"></code>
+                </div>
             </div>
-        </div>
-        <div class="alert-box build-order-box">
-            <h2>Ordens de Construção</h2>
-            <div id="buildOrderAlertsList" class="alerts-list">
-                <p class="no-alerts">Aguardando ordens de construção...</p>
-            </div>
-        </div>
-        <div class="alert-box attack-box">
-            <h2>Alertas de Ataque</h2>
-            <div id="attackAlertsList" class="alerts-list">
-                <p class="no-alerts">Aguardando alertas de ataque...</p>
-            </div>
-        </div>
+        </aside>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -367,28 +304,26 @@ nav<!DOCTYPE html>
         const auth = firebase.auth();
         const dbClient = firebase.firestore();
     </script>
-
+    
     <script>
-        // Seu script principal (initializeDashboardPage) continua aqui, sem alterações...
-        // (Colei ele aqui para garantir que esteja completo)
-        
-        // Função para copiar scripts
+        // SEU CÓDIGO JAVASCRIPT ORIGINAL E COMPLETO ESTÁ AQUI.
         window.copyScript = function(elementId) {
             const element = document.getElementById(elementId);
-            if (element && navigator.clipboard) {
-                const textToCopy = element.textContent;
+            const textToCopy = element.textContent;
+            if (element && navigator.clipboard && textToCopy.length > 1) {
                 navigator.clipboard.writeText(textToCopy).then(() => {
                     alert('Script copiado para a área de transferência!');
                 }).catch(err => {
                     console.error('Erro ao copiar texto: ', err);
-                    alert('Não foi possível copiar o script. Por favor, selecione e copie manualmente.');
+                    alert('Não foi possível copiar o script. Por favor, selecione e copie manually.');
                 });
+            } else if (textToCopy.length <= 1) {
+                 alert('Script ainda não carregado. Aguarde um momento.');
             } else {
                 alert('Seu navegador não suporta a cópia automática. Por favor, selecione o texto e copie manualmente.');
             }
         };
 
-        // Função para solicitar permissão de notificação
         function requestNotificationPermission() {
             if (!("Notification" in window)) {
                 console.warn("Este navegador não suporta notificações de desktop.");
@@ -405,11 +340,10 @@ nav<!DOCTYPE html>
             } else if (Notification.permission === "granted") {
                 alert('As notificações já estão ativadas.');
             } else if (Notification.permission === "denied") {
-                 alert('As notificações estão bloqueadas. Por favor, permita nas configurações do navegador.');
+                alert('As notificações estão bloqueadas. Por favor, permita nas configurações do navegador.');
             }
         }
 
-        // Função principal de inicialização
         function initializeDashboardPage() {
             const discordInput = document.getElementById('discord-webhook-input');
             const whatsappInput = document.getElementById('whatsapp-number-input');
@@ -442,45 +376,44 @@ nav<!DOCTYPE html>
                     userEmailDisplay.textContent = `Logado como: ${user.email}`;
                     userUidDisplay.textContent = user.uid;
                     async function apiRequest(endpoint, method = 'GET', body = null) {
-                    const idToken = await user.getIdToken();
-                    const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
-                    if (body) options.body = JSON.stringify(body);
-                    const response = await fetch(`/api/${endpoint}`, options);
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Falha na requisição à API.');
-                    }
-                    return response.status !== 204 ? await response.json() : null;
-                }
-        
-                async function loadUserSettings() {
-                    try {
-                        const settings = await apiRequest('user/settings');
-                        if (settings && settings.whatsappNumber) {
-                            whatsappInput.value = settings.whatsappNumber;
+                        const idToken = await user.getIdToken();
+                        const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
+                        if (body) options.body = JSON.stringify(body);
+                        const response = await fetch(`/api/${endpoint}`, options);
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Falha na requisição à API.');
                         }
-                    } catch (error) {
-                        console.warn("Não foi possível carregar as configurações do usuário.", error);
+                        return response.status !== 204 ? await response.json() : null;
                     }
-                }
-        
-                // Carrega as configurações assim que o usuário é confirmado
-                loadUserSettings();
-        
-                // --- Lógica do Botão Salvar ATUALIZADA ---
+            
+                    async function loadUserSettings() {
+                        try {
+                            const settings = await apiRequest('user/settings');
+                            if (settings) {
+                                if(settings.whatsappNumber) whatsappInput.value = settings.whatsappNumber;
+                                if(settings.discordWebhookUrl) discordInput.value = settings.discordWebhookUrl;
+                            }
+                        } catch (error) {
+                            console.warn("Não foi possível carregar as configurações do usuário.", error);
+                        }
+                    }
+            
+                    loadUserSettings();
+            
                     saveSettingsBtn.addEventListener('click', async () => {
                         const number = whatsappInput.value.trim();
                         const webhookUrl = discordInput.value.trim();
-            
+                
                         if (number && !/^\d{12,13}$/.test(number)) {
                             alert('Número de WhatsApp inválido. Use o formato 55DDD9XXXXXXXX ou deixe em branco.');
                             return;
                         }
-                        if (webhookUrl && !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+                        if (webhookUrl && webhookUrl.length > 0 && !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
                             alert('URL do Webhook do Discord parece inválida. Verifique a URL copiada.');
                             return;
                         }
-            
+                
                         saveSettingsBtn.disabled = true;
                         saveSettingsBtn.textContent = 'Salvando...';
                         try {
@@ -497,7 +430,6 @@ nav<!DOCTYPE html>
                         }
                     });
 
-                    // Fetch scripts
                     try {
                         const idToken = await user.getIdToken();
                         const response = await fetch(`${backendUrl}/get_userscripts_with_token`, {
@@ -510,18 +442,15 @@ nav<!DOCTYPE html>
                         attackScriptCodeElement.textContent = atob(scriptsBase64.ataquesScriptBase64);
                     } catch (error) {
                         console.error('Erro ao obter scripts:', error);
-                        captchaScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}.`;
-                        upadorScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}.`;
-                        attackScriptCodeElement.textContent = `Erro ao carregar script: ${error.message}.`;
+                        const errorMsg = `Erro ao carregar script: ${error.message}.`;
+                        captchaScriptCodeElement.textContent = errorMsg;
+                        upadorScriptCodeElement.textContent = errorMsg;
+                        attackScriptCodeElement.textContent = errorMsg;
                     }
                     
-                    // Firestore listener
                     const notifiedAlertIds = new Set(JSON.parse(localStorage.getItem('notifiedAlertIds') || '[]'));
-                    dbClient.collection('alerts')
-                        .where('userId', '==', user.uid)
-                        .orderBy('timestamp', 'desc')
+                    dbClient.collection('alerts').where('userId', '==', user.uid).orderBy('timestamp', 'desc')
                         .onSnapshot((snapshot) => {
-                            // Lógica de notificação para novos alertas
                             snapshot.docChanges().forEach(change => {
                                 if (change.type === "added") {
                                     const newAlertData = change.doc.data();
@@ -531,17 +460,11 @@ nav<!DOCTYPE html>
                                             const alertMessage = newAlertData.message;
                                             const nicknameMatch = alertMessage.match(/Conta "([^"]+)"/);
                                             const alertNickname = nicknameMatch ? nicknameMatch[1] : (newAlertData.userEmail.split('@')[0]);
-                                            
+                                        
                                             if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
-                                                new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", {
-                                                    body: `Captcha detectado para a conta: ${alertNickname}`,
-                                                    icon: 'https://www.google.com/favicon.ico'
-                                                });
+                                                new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", { body: `Captcha detectado para a conta: ${alertNickname}`});
                                             } else if (alertMessage.includes('ATAQUE(S) NOVO(S)!')) {
-                                                new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", {
-                                                    body: `A conta ${alertNickname} tem novos ataques a chegar!`,
-                                                    icon: 'https://dsbr.innogamescdn.com/asset/75cb846c/graphic/unit/att.webp'
-                                                });
+                                                new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", { body: `A conta ${alertNickname} tem novos ataques a chegar!`});
                                             }
                                         }
                                         notifiedAlertIds.add(alertId);
@@ -550,7 +473,6 @@ nav<!DOCTYPE html>
                             });
                             localStorage.setItem('notifiedAlertIds', JSON.stringify(Array.from(notifiedAlertIds)));
 
-                            // Lógica para renderizar todos os alertas na tela
                             const alertsToRender = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             captchaAlertsList.innerHTML = ''; buildOrderAlertsList.innerHTML = ''; attackAlertsList.innerHTML = '';
                             let hasCaptchaAlerts = false, hasBuildOrderAlerts = false, hasAttackAlerts = false;
@@ -561,20 +483,15 @@ nav<!DOCTYPE html>
                                 const timestampSpan = document.createElement('span');
                                 timestampSpan.className = 'timestamp';
                                 const date = alert.timestamp ? alert.timestamp.toDate() : new Date();
-                                const formattedDate = date.toLocaleString('pt-BR', {
-                                day: '2-digit', 
-                                month: '2-digit', 
-                                hour: '2-digit', 
-                                minute: '2-digit'
-                            });
-                            timestampSpan.textContent = `[${formattedDate}]`;
+                                const formattedDate = date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                                timestampSpan.textContent = `[${formattedDate}]`;
                                 
                                 const messageSpan = document.createElement('span');
                                 messageSpan.className = 'message';
                                 const emojiSpan = document.createElement('span');
                                 emojiSpan.className = 'emoji-prefix';
-
                                 const cleanMessage = alert.message.replace(/^[^\w\s]*\s*/, '');
+                                
                                 if (cleanMessage.includes('CAPTCHA')) {
                                     div.classList.add('captcha'); emojiSpan.textContent = '🚨⚠️';
                                     captchaAlertsList.appendChild(div); hasCaptchaAlerts = true;
@@ -616,7 +533,6 @@ nav<!DOCTYPE html>
                 }
             });
         }
-
         initializeDashboardPage();
     </script>
 </body>

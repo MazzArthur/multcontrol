@@ -4,7 +4,7 @@
 // @description  Script com atualizações automáticas que se conecta à plataforma MULTCONTROL.
 // @author       MazzArthur
 // @include      http*://*.*game.php*
-// @version      2.0.0
+// @version      2.0.1
 // @updateURL    https://multcontrol.onrender.com/scripts/upador.meta.js
 // @downloadURL  https://multcontrol.onrender.com/scripts/upador.user.js
 // @grant        GM_getValue
@@ -32,7 +32,9 @@
     var authClient;
     const Visualizacao_Geral = "OVERVIEW_VIEW";
     const Edificio_Principal = "HEADQUARTERS_VIEW";
-    
+    let FIREBASE_CLIENT_CONFIG = {};
+    let USERSCRIPT_API_KEY = '';
+
     // ============================================================================
     // == NOVA LÓGICA DE CONFIGURAÇÃO E MIGRAÇÃO DE CHAVES ==
     // ============================================================================
@@ -40,7 +42,7 @@
         const hardcodedConfig = {}; // Suas configs injetadas podem estar aqui
         const hardcodedApiKey = "";   // Sua API key injetada pode estar aqui
 
-                let storedConfig = GM_getValue("FIREBASE_CLIENT_CONFIG", null);
+        let storedConfig = GM_getValue("FIREBASE_CLIENT_CONFIG", null);
         let storedApiKey = GM_getValue("USERSCRIPT_API_KEY", null);
 
         // Se as chaves já estão salvas localmente, usa elas.

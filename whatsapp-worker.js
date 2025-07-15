@@ -154,6 +154,10 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
             res.status(500).json({ success: false, error: 'Erro interno ao processar mensagem.' });
         }
     });
+    // ✅ Inicia o servidor Express
+    app.listen(PORT, () => {
+        console.log(`[WORKER] 🌐 Servidor HTTP iniciado na porta ${PORT}`);
+    });
 
 }).catch(err => {
     console.error('[WORKER ERROR] ❌ Falha ao conectar ao MongoDB:', err);

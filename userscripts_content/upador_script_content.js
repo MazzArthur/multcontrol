@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         Upador Automático v2.0 - Auto-Update Inteligente
-// @icon         https://i.imgur.com/7WgHTT8.gif
+// @name         Upador Automático v2.0.2 - MultControl
+// @icon         https://i.imgur.com/p5aYWUF.gif
 // @description  Script com atualizações automáticas que se conecta à plataforma MULTCONTROL.
 // @author       MazzArthur
 // @include      http*://*.*game.php*
-// @version      2.0.1
+// @version      2.0.2
 // @updateURL    https://multcontrol.onrender.com/scripts/upador.meta.js
 // @downloadURL  https://multcontrol.onrender.com/scripts/upador.user.js
 // @grant        GM_getValue

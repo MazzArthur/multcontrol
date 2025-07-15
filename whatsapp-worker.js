@@ -145,3 +145,4 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
         res.status(500).json({ success: false, error: 'Erro interno ao processar mensagem.' });
     }
 });
+});

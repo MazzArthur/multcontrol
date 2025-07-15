@@ -1,4 +1,4 @@
-nav<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -306,234 +306,234 @@ nav<!DOCTYPE html>
     </script>
     
     <script>
-        // SEU CÓDIGO JAVASCRIPT ORIGINAL E COMPLETO ESTÁ AQUI.
-        window.copyScript = function(elementId) {
-            const element = document.getElementById(elementId);
-            const textToCopy = element.textContent;
-            if (element && navigator.clipboard && textToCopy.length > 1) {
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    alert('Script copiado para a área de transferência!');
-                }).catch(err => {
-                    console.error('Erro ao copiar texto: ', err);
-                    alert('Não foi possível copiar o script. Por favor, selecione e copie manually.');
-                });
-            } else if (textToCopy.length <= 1) {
-                 alert('Script ainda não carregado. Aguarde um momento.');
-            } else {
-                alert('Seu navegador não suporta a cópia automática. Por favor, selecione o texto e copie manualmente.');
-            }
-        };
+         // SEU CÓDIGO JAVASCRIPT ORIGINAL E COMPLETO ESTÁ AQUI.
+    window.copyScript = function(elementId) {
+        const element = document.getElementById(elementId);
+        const textToCopy = element.textContent;
+        if (element && navigator.clipboard && textToCopy.length > 1) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert('Script copiado para a área de transferência!');
+            }).catch(err => {
+                console.error('Erro ao copiar texto: ', err);
+                alert('Não foi possível copiar o script. Por favor, selecione e copie manualmente.');
+            });
+        } else if (textToCopy.length <= 1) {
+                alert('Script ainda não carregado. Aguarde um momento.');
+        } else {
+            alert('Seu navegador não suporta a cópia automática. Por favor, selecione o texto e copie manualmente.');
+        }
+    };
 
-        function requestNotificationPermission() {
-            if (!("Notification" in window)) {
-                console.warn("Este navegador não suporta notificações de desktop.");
-            } else if (Notification.permission === "default") {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        console.log("Permissão para notificações concedida.");
-                        alert('Notificações de desktop ativadas!');
-                    } else if (permission === "denied") {
-                        console.warn("Permissão para notificações negada.");
-                        alert('Permissão para notificações negada. Por favor, altere nas configurações do navegador.');
-                    }
-                });
-            } else if (Notification.permission === "granted") {
-                alert('As notificações já estão ativadas.');
-            } else if (Notification.permission === "denied") {
-                alert('As notificações estão bloqueadas. Por favor, permita nas configurações do navegador.');
-            }
+    function requestNotificationPermission() {
+        if (!("Notification" in window)) {
+            console.warn("Este navegador não suporta notificações de desktop.");
+        } else if (Notification.permission === "default") {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("Permissão para notificações concedida.");
+                    alert('Notificações de desktop ativadas!');
+                } else if (permission === "denied") {
+                    console.warn("Permissão para notificações negada.");
+                    alert('Permissão para notificações negada. Por favor, altere nas configurações do navegador.');
+                }
+            });
+        } else if (Notification.permission === "granted") {
+            alert('As notificações já estão ativadas.');
+        } else if (Notification.permission === "denied") {
+            alert('As notificações estão bloqueadas. Por favor, permita nas configurações do navegador.');
+        }
+    }
+
+    function initializeDashboardPage() {
+        const discordInput = document.getElementById('discord-webhook-input');
+        const whatsappInput = document.getElementById('whatsapp-number-input');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const userEmailDisplay = document.getElementById('userEmailDisplay');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userUidDisplay = document.getElementById('userUidDisplay');
+        const captchaScriptCodeElement = document.getElementById('captchaScriptCode');
+        const upadorScriptCodeElement = document.getElementById('upadorScriptCode');
+        const attackScriptCodeElement = document.getElementById('attackScriptCode');
+        const captchaAlertsList = document.getElementById('captchaAlertsList');
+        const attackAlertsList = document.getElementById('attackAlertsList');
+        const backendUrl = 'https://multcontrol.onrender.com';
+        
+        document.querySelectorAll('.copy-script-button').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const scriptId = event.target.dataset.scriptId;
+                window.copyScript(scriptId);
+            });
+        });
+
+        const activateNotificationsButton = document.getElementById('activateNotificationsBtn');
+        if (activateNotificationsButton) {
+            activateNotificationsButton.addEventListener('click', requestNotificationPermission);
         }
 
-        function initializeDashboardPage() {
-            const discordInput = document.getElementById('discord-webhook-input');
-            const whatsappInput = document.getElementById('whatsapp-number-input');
-            const saveSettingsBtn = document.getElementById('save-settings-btn');
-            const userEmailDisplay = document.getElementById('userEmailDisplay');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const userUidDisplay = document.getElementById('userUidDisplay');
-            const captchaScriptCodeElement = document.getElementById('captchaScriptCode');
-            const upadorScriptCodeElement = document.getElementById('upadorScriptCode');
-            const attackScriptCodeElement = document.getElementById('attackScriptCode');
-            const captchaAlertsList = document.getElementById('captchaAlertsList');
-            const buildOrderAlertsList = document.getElementById('buildOrderAlertsList');
-            const attackAlertsList = document.getElementById('attackAlertsList');
-            const backendUrl = 'https://multcontrol.onrender.com';
-            
-            document.querySelectorAll('.copy-script-button').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const scriptId = event.target.dataset.scriptId;
-                    window.copyScript(scriptId);
-                });
-            });
-
-            const activateNotificationsButton = document.getElementById('activateNotificationsBtn');
-            if (activateNotificationsButton) {
-                activateNotificationsButton.addEventListener('click', requestNotificationPermission);
-            }
-
-            auth.onAuthStateChanged(async user => {
-                if (user) {
-                    userEmailDisplay.textContent = `Logado como: ${user.email}`;
-                    userUidDisplay.textContent = user.uid;
-                    async function apiRequest(endpoint, method = 'GET', body = null) {
-                        const idToken = await user.getIdToken();
-                        const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
-                        if (body) options.body = JSON.stringify(body);
-                        const response = await fetch(`/api/${endpoint}`, options);
-                        if (!response.ok) {
-                            const errorData = await response.json();
-                            throw new Error(errorData.error || 'Falha na requisição à API.');
-                        }
-                        return response.status !== 204 ? await response.json() : null;
+        auth.onAuthStateChanged(async user => {
+            if (user) {
+                userEmailDisplay.textContent = `Logado como: ${user.email}`;
+                userUidDisplay.textContent = user.uid;
+                async function apiRequest(endpoint, method = 'GET', body = null) {
+                    const idToken = await user.getIdToken();
+                    const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
+                    if (body) options.body = JSON.stringify(body);
+                    const response = await fetch(`/api/${endpoint}`, options);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Falha na requisição à API.');
                     }
-            
-                    async function loadUserSettings() {
-                        try {
-                            const settings = await apiRequest('user/settings');
-                            if (settings) {
-                                if(settings.whatsappNumber) whatsappInput.value = settings.whatsappNumber;
-                                if(settings.discordWebhookUrl) discordInput.value = settings.discordWebhookUrl;
-                            }
-                        } catch (error) {
-                            console.warn("Não foi possível carregar as configurações do usuário.", error);
-                        }
-                    }
-            
-                    loadUserSettings();
-            
-                    saveSettingsBtn.addEventListener('click', async () => {
-                        const number = whatsappInput.value.trim();
-                        const webhookUrl = discordInput.value.trim();
-                
-                        if (number && !/^\d{12,13}$/.test(number)) {
-                            alert('Número de WhatsApp inválido. Use o formato 55DDD9XXXXXXXX ou deixe em branco.');
-                            return;
-                        }
-                        if (webhookUrl && webhookUrl.length > 0 && !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
-                            alert('URL do Webhook do Discord parece inválida. Verifique a URL copiada.');
-                            return;
-                        }
-                
-                        saveSettingsBtn.disabled = true;
-                        saveSettingsBtn.textContent = 'Salvando...';
-                        try {
-                            await apiRequest('user/settings', 'POST', { 
-                                whatsappNumber: number,
-                                discordWebhookUrl: webhookUrl
-                            });
-                            alert('Configurações salvas com sucesso!');
-                        } catch (error) {
-                            alert('Erro ao salvar as configurações. Tente novamente.');
-                        } finally {
-                            saveSettingsBtn.disabled = false;
-                            saveSettingsBtn.textContent = 'Salvar Configurações';
-                        }
-                    });
-
+                    return response.status !== 204 ? await response.json() : null;
+                }
+        
+                async function loadUserSettings() {
                     try {
-                        const idToken = await user.getIdToken();
-                        const response = await fetch(`${backendUrl}/get_userscripts_with_token`, {
-                            headers: { 'Authorization': `Bearer ${idToken}` }
-                        });
-                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                        const scriptsBase64 = await response.json();
-                        captchaScriptCodeElement.textContent = atob(scriptsBase64.captchaScriptBase64);
-                        upadorScriptCodeElement.textContent = atob(scriptsBase64.upadorScriptBase64);
-                        attackScriptCodeElement.textContent = atob(scriptsBase64.ataquesScriptBase64);
+                        const settings = await apiRequest('user/settings');
+                        if (settings) {
+                            if(settings.whatsappNumber) whatsappInput.value = settings.whatsappNumber;
+                            if(settings.discordWebhookUrl) discordInput.value = settings.discordWebhookUrl;
+                        }
                     } catch (error) {
-                        console.error('Erro ao obter scripts:', error);
-                        const errorMsg = `Erro ao carregar script: ${error.message}.`;
-                        captchaScriptCodeElement.textContent = errorMsg;
-                        upadorScriptCodeElement.textContent = errorMsg;
-                        attackScriptCodeElement.textContent = errorMsg;
+                        console.warn("Não foi possível carregar as configurações do usuário.", error);
                     }
-                    
-                    const notifiedAlertIds = new Set(JSON.parse(localStorage.getItem('notifiedAlertIds') || '[]'));
-                    dbClient.collection('alerts').where('userId', '==', user.uid).orderBy('timestamp', 'desc')
-                        .onSnapshot((snapshot) => {
-                            snapshot.docChanges().forEach(change => {
-                                if (change.type === "added") {
-                                    const newAlertData = change.doc.data();
-                                    const alertId = change.doc.id;
-                                    if (!notifiedAlertIds.has(alertId)) {
-                                        if (document.hidden && Notification.permission === "granted") {
-                                            const alertMessage = newAlertData.message;
-                                            const nicknameMatch = alertMessage.match(/Conta "([^"]+)"/);
-                                            const alertNickname = nicknameMatch ? nicknameMatch[1] : (newAlertData.userEmail.split('@')[0]);
-                                        
-                                            if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
-                                                new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", { body: `Captcha detectado para a conta: ${alertNickname}`});
-                                            } else if (alertMessage.includes('ATAQUE(S) NOVO(S)!')) {
-                                                new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", { body: `A conta ${alertNickname} tem novos ataques a chegar!`});
-                                            }
-                                        }
-                                        notifiedAlertIds.add(alertId);
-                                    }
-                                }
-                            });
-                            localStorage.setItem('notifiedAlertIds', JSON.stringify(Array.from(notifiedAlertIds)));
-
-                            const alertsToRender = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            captchaAlertsList.innerHTML = ''; buildOrderAlertsList.innerHTML = ''; attackAlertsList.innerHTML = '';
-                            let hasCaptchaAlerts = false, hasBuildOrderAlerts = false, hasAttackAlerts = false;
-
-                            alertsToRender.forEach(alert => {
-                                const div = document.createElement('div');
-                                div.className = 'alert-item';
-                                const timestampSpan = document.createElement('span');
-                                timestampSpan.className = 'timestamp';
-                                const date = alert.timestamp ? alert.timestamp.toDate() : new Date();
-                                const formattedDate = date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-                                timestampSpan.textContent = `[${formattedDate}]`;
-                                
-                                const messageSpan = document.createElement('span');
-                                messageSpan.className = 'message';
-                                const emojiSpan = document.createElement('span');
-                                emojiSpan.className = 'emoji-prefix';
-                                const cleanMessage = alert.message.replace(/^[^\w\s]*\s*/, '');
-                                
-                                if (cleanMessage.includes('CAPTCHA')) {
-                                    div.classList.add('captcha'); emojiSpan.textContent = '🚨⚠️';
-                                    captchaAlertsList.appendChild(div); hasCaptchaAlerts = true;
-                                } else if (cleanMessage.includes('Construcao')) {
-                                    div.classList.add('build-order'); emojiSpan.textContent = '🚨🏰';
-                                    buildOrderAlertsList.appendChild(div); hasBuildOrderAlerts = true;
-                                } else if (cleanMessage.includes('ATAQUE')) {
-                                    div.classList.add('attack-alert'); emojiSpan.textContent = '🚨⚔️';
-                                    attackAlertsList.appendChild(div); hasAttackAlerts = true;
-                                } else {
-                                    div.classList.add('general'); emojiSpan.textContent = 'ℹ️';
-                                    buildOrderAlertsList.appendChild(div); hasBuildOrderAlerts = true;
-                                }
-                                
-                                messageSpan.appendChild(emojiSpan);
-                                messageSpan.appendChild(document.createTextNode(cleanMessage));
-                                div.appendChild(timestampSpan);
-                                div.appendChild(messageSpan);
-                            });
-
-                            if (!hasCaptchaAlerts) captchaAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de Captcha recente.</p>';
-                            if (!hasBuildOrderAlerts) buildOrderAlertsList.innerHTML = '<p class="no-alerts">Nenhuma ordem de construção recente.</p>';
-                            if (!hasAttackAlerts) attackAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de ataque recente.</p>';
-
-                        }, (error) => {
-                            console.error('[Dashboard] Erro ao ouvir alertas:', error);
+                }
+        
+                loadUserSettings();
+        
+                saveSettingsBtn.addEventListener('click', async () => {
+                    const number = whatsappInput.value.trim();
+                    const webhookUrl = discordInput.value.trim();
+            
+                    if (number && !/^\d{12,13}$/.test(number)) {
+                        alert('Número de WhatsApp inválido. Use o formato 55DDD9XXXXXXXX ou deixe em branco.');
+                        return;
+                    }
+                    if (webhookUrl && webhookUrl.length > 0 && !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+                        alert('URL do Webhook do Discord parece inválida. Verifique a URL copiada.');
+                        return;
+                    }
+            
+                    saveSettingsBtn.disabled = true;
+                    saveSettingsBtn.textContent = 'Salvando...';
+                    try {
+                        await apiRequest('user/settings', 'POST', { 
+                            whatsappNumber: number,
+                            discordWebhookUrl: webhookUrl
                         });
-                } else {
-                    window.location.href = '/';
-                }
-            });
+                        alert('Configurações salvas com sucesso!');
+                    } catch (error) {
+                        alert('Erro ao salvar as configurações. Tente novamente.');
+                    } finally {
+                        saveSettingsBtn.disabled = false;
+                        saveSettingsBtn.textContent = 'Salvar Configurações';
+                    }
+                });
 
-            logoutBtn.addEventListener('click', async () => {
                 try {
-                    await auth.signOut();
-                    window.location.href = '/';
+                    const idToken = await user.getIdToken();
+                    const response = await fetch(`${backendUrl}/get_userscripts_with_token`, {
+                        headers: { 'Authorization': `Bearer ${idToken}` }
+                    });
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const scriptsBase64 = await response.json();
+                    captchaScriptCodeElement.textContent = atob(scriptsBase64.captchaScriptBase64);
+                    upadorScriptCodeElement.textContent = atob(scriptsBase64.upadorScriptBase64);
+                    attackScriptCodeElement.textContent = atob(scriptsBase64.ataquesScriptBase64);
                 } catch (error) {
-                    console.error('Erro ao deslogar:', error);
+                    console.error('Erro ao obter scripts:', error);
+                    const errorMsg = `Erro ao carregar script: ${error.message}.`;
+                    captchaScriptCodeElement.textContent = errorMsg;
+                    upadorScriptCodeElement.textContent = errorMsg;
+                    attackScriptCodeElement.textContent = errorMsg;
                 }
-            });
-        }
-        initializeDashboardPage();
+                
+                const notifiedAlertIds = new Set(JSON.parse(localStorage.getItem('notifiedAlertIds') || '[]'));
+                dbClient.collection('alerts').where('userId', '==', user.uid).orderBy('timestamp', 'desc')
+                    .onSnapshot((snapshot) => {
+                        snapshot.docChanges().forEach(change => {
+                            if (change.type === "added") {
+                                const newAlertData = change.doc.data();
+                                const alertId = change.doc.id;
+                                if (!notifiedAlertIds.has(alertId)) {
+                                    if (document.hidden && Notification.permission === "granted") {
+                                        const alertMessage = newAlertData.message;
+                                        const nicknameMatch = alertMessage.match(/Conta "([^"]+)"/);
+                                        const alertNickname = nicknameMatch ? nicknameMatch[1] : (newAlertData.userEmail.split('@')[0]);
+                                    
+                                        if (alertMessage.includes('CAPTCHA NECESSARIO!')) {
+                                            new Notification("🚨 AÇÃO NECESSÁRIA! Captcha!", { body: `Captcha detectado para a conta: ${alertNickname}`});
+                                        } else if (alertMessage.includes('ATAQUE(S) NOVO(S)!')) {
+                                            new Notification("⚔️ NOVO ATAQUE EM TRIBAL WARS!", { body: `A conta ${alertNickname} tem novos ataques a chegar!`});
+                                        }
+                                    }
+                                    notifiedAlertIds.add(alertId);
+                                }
+                            }
+                        });
+                        localStorage.setItem('notifiedAlertIds', JSON.stringify(Array.from(notifiedAlertIds)));
+
+                        const alertsToRender = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        
+                        // CORREÇÃO: Removida a menção a buildOrderAlertsList
+                        captchaAlertsList.innerHTML = ''; 
+                        attackAlertsList.innerHTML = '';
+                        
+                        // CORREÇÃO: Removida a menção a hasBuildOrderAlerts
+                        let hasCaptchaAlerts = false, hasAttackAlerts = false;
+
+                        alertsToRender.forEach(alert => {
+                            const div = document.createElement('div');
+                            div.className = 'alert-item';
+                            const timestampSpan = document.createElement('span');
+                            timestampSpan.className = 'timestamp';
+                            const date = alert.timestamp ? alert.timestamp.toDate() : new Date();
+                            const formattedDate = date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                            timestampSpan.textContent = `[${formattedDate}]`;
+                            
+                            const messageSpan = document.createElement('span');
+                            messageSpan.className = 'message';
+                            const emojiSpan = document.createElement('span');
+                            emojiSpan.className = 'emoji-prefix';
+                            const cleanMessage = alert.message.replace(/^[^\w\s]*\s*/, '');
+                            
+                            // CORREÇÃO: Removido o bloco 'else if' para 'Construcao'
+                            if (cleanMessage.includes('CAPTCHA')) {
+                                div.classList.add('captcha'); emojiSpan.textContent = '🚨⚠️';
+                                captchaAlertsList.appendChild(div); hasCaptchaAlerts = true;
+                            } else if (cleanMessage.includes('ATAQUE')) {
+                                div.classList.add('attack-alert'); emojiSpan.textContent = '🚨⚔️';
+                                attackAlertsList.appendChild(div); hasAttackAlerts = true;
+                            } 
+                            // O bloco 'else' que adicionava a 'buildOrderAlertsList' foi implicitamente removido.
+                            
+                            messageSpan.appendChild(emojiSpan);
+                            messageSpan.appendChild(document.createTextNode(cleanMessage));
+                            div.appendChild(timestampSpan);
+                            div.appendChild(messageSpan);
+                        });
+
+                        if (!hasCaptchaAlerts) captchaAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de Captcha recente.</p>';
+                        // CORREÇÃO: Removida a verificação para 'hasBuildOrderAlerts'
+                        if (!hasAttackAlerts) attackAlertsList.innerHTML = '<p class="no-alerts">Nenhum alerta de ataque recente.</p>';
+
+                    }, (error) => {
+                        console.error('[Dashboard] Erro ao ouvir alertas:', error);
+                    });
+            } else {
+                window.location.href = '/';
+            }
+        });
+
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await auth.signOut();
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Erro ao deslogar:', error);
+            }
+        });
+    }
+    initializeDashboardPage();
     </script>
 </body>
 </html>

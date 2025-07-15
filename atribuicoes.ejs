@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atribuir Perfis - MULTCONTROL</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -13,37 +13,121 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
-        body { font-family: 'Roboto', sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
-        .navbar { background-color: #2c3e50; width: 100%; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .navbar-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: flex-start; }
-        .navbar a { float: left; color: white; text-align: center; padding: 14px 20px; text-decoration: none; font-size: 17px; font-weight: bold; }
-        .navbar a:hover { background-color: #3498db; }
-        .navbar a.active { background-color: #2980b9; }
-        .main-container { max-width: 900px; margin: 30px auto; padding: 30px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 25px; }
-        .assignment-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #e0e0e0; gap: 20px;}
+        @font-face {
+            font-family: 'MedievalSharp';
+            src: url('MedievalSharp-Regular.ttf') format('truetype');
+        }
+
+        html { font-size: clamp(14px, 1.5vw + 0.5rem, 16px); }
+        body {
+            margin: 0; padding: 0; font-family: 'MedievalSharp', cursive;
+            font-size: 1rem; color: #eee;
+            background: url('https://i.imgur.com/spPUGqP.png') repeat, #30221d;
+            background-size: cover; display: flex; flex-direction: column;
+            align-items: center; min-height: 100vh;
+        }
+        
+        /* --- ESTILOS DA NAVBAR --- */
+        .navbar {
+            background-color: rgba(25, 20, 18, 0.5); backdrop-filter: blur(4px);
+            width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 20px; border-bottom: 1px solid rgba(207, 163, 68, 0.3);
+            position: sticky; top: 0; z-index: 1000;
+        }
+        .navbar-container {
+            max-width: 1200px; margin: 0 auto; padding: 0 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px;
+        }
+        .navbar-left, .navbar-right { display: flex; align-items: center; gap: 20px; }
+        .navbar-logo { height: 40px; width: auto; }
+        .navbar a {
+            color: #fff8dc; text-align: center; padding: 10px 15px;
+            text-decoration: none; font-size: 1.1rem; font-weight: bold;
+            transition: background-color 0.3s; border-radius: 6px;
+        }
+        .navbar a:hover { background-color: rgba(207, 163, 68, 0.8); color: #111; }
+        .navbar a.active { background-color: #cfa344; color: #111; }
+        .navbar-user-info { display: flex; align-items: center; gap: 15px; }
+        .navbar-user-info .user-details { text-align: right; }
+        .navbar-user-info p { margin: 0; font-size: 0.9em; color: #ccc; line-height: 1.3; font-family: 'Roboto', sans-serif;}
+        .navbar-user-info strong { color: #fff8dc; font-family: 'Roboto', sans-serif; font-weight: bold; }
+        #logoutBtn {
+            background: rgba(198, 40, 40, 0.6); border: 1px solid #D32F2F; color: #fff8dc;
+            padding: 8px 12px; font-size: 0.9rem; font-family: 'MedievalSharp', cursive;
+            border-radius: 0.5rem; cursor: pointer; transition: all 0.3s ease;
+        }
+        #logoutBtn:hover { background-color: rgba(211, 47, 47, 0.7); }
+
+        /* --- ESTILOS GERAIS DA PÁGINA --- */
+        .main-container {
+            padding: 30px; width: 100%; max-width: 900px; box-sizing: border-box;
+            background: rgba(43, 30, 25, 0.25); backdrop-filter: blur(2px);
+            border: 1px solid rgba(207, 163, 68, 0.3);
+            border-radius: 1rem; box-shadow: 0 0 1.5rem rgba(0, 0, 0, 0.4);
+        }
+        h1 {
+            font-family: 'MedievalSharp', cursive; color: #fff8dc;
+            text-align: center; border-bottom: 1px solid rgba(207, 163, 68, 0.5);
+            padding-bottom: 15px; margin-bottom: 25px;
+        }
+        p { font-family: 'Roboto', sans-serif; }
+        
+        .assignment-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 10px; border-bottom: 1px solid rgba(207, 163, 68, 0.2);
+            gap: 20px;
+        }
         .assignment-row:last-child { border-bottom: none; }
-        .nickname-label { font-size: 1.1em; font-weight: bold; color: #34495e; }
-        .profile-select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1em; min-width: 250px; }
-        .save-btn { display: block; width: 100%; padding: 15px; margin-top: 30px; background-color: #28a745; color: white; border: none; border-radius: 5px; font-size: 1.2em; font-weight: bold; cursor: pointer; transition: background-color 0.3s; }
-        .save-btn:hover:not(:disabled) { background-color: #218838; }
-        .save-btn:disabled { background-color: #a5d6a7; cursor: not-allowed; }
-        #loading-message, #no-nicknames-message { text-align: center; color: #777; font-size: 1.1em; padding: 20px; }
-        #status-message { text-align: center; font-weight: bold; color: green; height: 20px; margin-top: 15px; }
+        .nickname-label {
+            font-size: 1.1em; font-weight: bold;
+            font-family: 'Roboto', sans-serif; color: #eee;
+        }
+        .profile-select {
+            padding: 8px; border: 1px solid #cfa344; border-radius: 4px;
+            font-size: 1em; min-width: 250px;
+            background-color: rgba(255, 255, 255, 0.8); color: #333;
+        }
+        .save-btn {
+            display: block; width: 100%; padding: 15px; margin-top: 30px;
+            background-color: rgba(40, 167, 69, 0.7);
+            border: 2px solid #28a745;
+            color: white; border-radius: 5px; font-size: 1.2em;
+            font-weight: bold; cursor: pointer; transition: background-color 0.3s;
+            font-family: 'MedievalSharp', cursive;
+        }
+        .save-btn:hover:not(:disabled) { background-color: rgba(40, 167, 69, 0.9); }
+        .save-btn:disabled { background-color: #555; border-color: #444; cursor: not-allowed; }
+        
+        #loading-message, #no-nicknames-message { text-align: center; color: #aaa; font-size: 1.1em; padding: 20px; }
+        #status-message { text-align: center; font-weight: bold; color: #b9f6ca; height: 20px; margin-top: 15px; }
+        #status-message.error { color: #ff8a80; }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-container">
-            <a href="/dashboard.html">Dashboard</a>
-            <a href="/personalizar">Perfis de Construção</a>
-            <a href="/atribuicoes" class="active">Atribuir Perfis</a>
+            <div class="navbar-left">
+                <img src="https://i.imgur.com/l957Jp1.png" alt="Logo" class="navbar-logo">
+                <a href="/dashboard.html">Dashboard</a>
+                <a href="/personalizar">Perfis de Construção</a>
+                <a href="/atribuicoes" class="active">Atribuir Perfis</a>
+            </div>
+            <div class="navbar-right">
+                 <div class="navbar-user-info">
+                    <div class="user-details">
+                        <p id="userEmailDisplay"></p>
+                        <p>UID: <strong id="userUidDisplay"></strong></p>
+                    </div>
+                    <button id="logoutBtn">Sair</button>
+                </div>
+            </div>
         </div>
     </nav>
 
     <div class="main-container">
         <h1>Atribuir Perfil de Construção por Conta</h1>
-        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+        <p style="text-align: center; color: #ccc; margin-bottom: 20px;">
             Aqui você define qual perfil de construção será usado para cada conta do jogo.
         </p>
 
@@ -61,19 +145,24 @@
     const db = firebase.firestore();
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Ponto de entrada: espera a confirmação do status de login
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // Se o usuário está logado, inicializa a lógica da página
                 initializeApp(user);
             } else {
-                // Se não, bloqueia o acesso
                 document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
             }
         });
 
-        // Função principal que contém toda a lógica da página
         async function initializeApp(user) {
+            // Lógica da Navbar
+            const userEmailDisplay = document.getElementById('userEmailDisplay');
+            const userUidDisplay = document.getElementById('userUidDisplay');
+            const logoutBtn = document.getElementById('logoutBtn');
+            if(userEmailDisplay) userEmailDisplay.textContent = user.email;
+            if(userUidDisplay) userUidDisplay.textContent = user.uid;
+            if(logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut().then(() => { window.location.href = '/'; }));
+
+            // Lógica original da página
             const loadingMessage = document.getElementById('loading-message');
             const assignmentsContainer = document.getElementById('assignments-container');
             const noNicknamesMessage = document.getElementById('no-nicknames-message');
@@ -152,17 +241,18 @@
                 try {
                     await apiRequest('assignments', 'POST', { assignments });
                     statusMessage.textContent = "Atribuições salvas com sucesso!";
+                    statusMessage.classList.remove('error');
                     setTimeout(() => statusMessage.textContent = '', 3000);
                 } catch (error) {
                     statusMessage.style.color = 'red';
                     statusMessage.textContent = `Erro ao salvar: ${error.message}`;
+                    statusMessage.classList.add('error');
                 } finally {
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Salvar Atribuições';
                 }
             });
 
-            // Inicia o carregamento dos dados
             try {
                 const [nicknames, profiles, currentAssignments] = await Promise.all([
                     apiRequest('nicknames'),

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Alerta de Ataques v2.0 - Auto-Update Inteligente
-// @icon         https://dsbr.innogamescdn.com/asset/75cb846c/graphic/unit/att.webp
+// @icon         https://i.imgur.com/p5aYWUF.gif
 // @description  Verifica por novos ataques e envia alertas para a plataforma MULTCONTROL.
 // @author       MazzArthur & Gemini
 // @include      http*://*.*game.php*

@@ -184,6 +184,44 @@ app.get('/api/build-orders', requireAuth, async (req, res) => {
         res.status(200).json(profiles);
     } catch (error) { res.status(500).json({ error: 'Erro ao buscar ordens. Verifique se o índice do Firestore foi criado.' }); }
 });
+// Rota para o Tampermonkey verificar a VERSÃO do script de ataques (meta)
+app.get('/scripts/ataques.meta.js', (req, res) => {
+    const filePath = path.join(__dirname, 'userscripts_content', 'ataques_script_content.js');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Erro ao ler o arquivo do script de ataques:', err);
+            return res.status(404).send('// Script not found');
+        }
+        const headerMatch = data.match(/\/\/\s*==UserScript==[\s\S]+?\/\/\s*==\/UserScript==/);
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+
+        // Evitar cache para garantir que o Tampermonkey sempre verifique atualizações
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
+        res.send(headerMatch ? headerMatch[0] : '// Header not found');
+    });
+});
+
+// Rota para o Tampermonkey BAIXAR a versão completa do script de ataques
+app.get('/scripts/ataques.user.js', (req, res) => {
+    const filePath = path.join(__dirname, 'userscripts_content', 'ataques_script_content.js');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Erro ao ler o arquivo do script de ataques:', err);
+            return res.status(404).send('// Script not found');
+        }
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+
+        // Também evitar cache aqui
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
+        res.send(data);
+    });
+});
 
 app.post('/api/build-orders', requireAuth, async (req, res) => {
     const { profileName, order } = req.body;

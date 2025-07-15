@@ -122,18 +122,7 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
 
             const delay = Math.floor(Math.random() * 3000) + 1000;
             setTimeout(async () => {
-                await client.sendMessage(chatId, {
-                    text: message,
-                    buttons: [
-                        {
-                            buttonId: 'botao_recebido',
-                            buttonText: { displayText: '✅ Recebido' },
-                            type: 1
-                        }
-                    ],
-                    footer: 'Toque no botão para confirmar',
-                    headerType: 1
-                });
+                await client.sendMessage(chatId, message);
                 await chat.clearState();
             }, delay);
 

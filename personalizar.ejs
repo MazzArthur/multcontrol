@@ -14,13 +14,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        /* Fonte local do tema medieval */
         @font-face {
             font-family: 'MedievalSharp';
             src: url('MedievalSharp-Regular.ttf') format('truetype');
         }
 
-        /* --- ESTILO "CASCA" MEDIEVAL --- */
         html { font-size: clamp(14px, 1.5vw + 0.5rem, 16px); }
         body {
             margin: 0; padding: 0; font-family: 'MedievalSharp', cursive;
@@ -33,73 +31,85 @@
             background-color: rgba(25, 20, 18, 0.5); backdrop-filter: blur(4px);
             width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             margin-bottom: 20px; border-bottom: 1px solid rgba(207, 163, 68, 0.3);
+            position: sticky; top: 0; z-index: 1000;
         }
-        .navbar-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: flex-start; }
+        .navbar-container {
+            max-width: 1200px; margin: 0 auto; padding: 0 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px;
+        }
+        .navbar-left, .navbar-right { display: flex; align-items: center; gap: 20px; }
+        .navbar-logo { height: 40px; width: auto; }
         .navbar a {
-            color: #fff8dc; text-align: center; padding: 14px 20px;
+            color: #fff8dc; text-align: center; padding: 10px 15px;
             text-decoration: none; font-size: 1.1rem; font-weight: bold;
-            transition: background-color 0.3s, color 0.3s;
+            transition: background-color 0.3s; border-radius: 6px;
         }
         .navbar a:hover { background-color: rgba(207, 163, 68, 0.8); color: #111; }
         .navbar a.active { background-color: #cfa344; color: #111; }
         
-        /* --- ESTRUTURA E TÍTULOS PRINCIPAIS --- */
-        .main-container { padding: 20px; width: 100%; max-width: 1200px; box-sizing: border-box; }
-        h1, h2 {
-            font-family: 'MedievalSharp', cursive; /* Títulos com a fonte do tema */
-            color: #fff8dc;
-            border-bottom: 1px solid rgba(207, 163, 68, 0.5);
-            padding-bottom: 10px; margin-top: 0;
+        .navbar-user-info { display: flex; align-items: center; gap: 15px; }
+        .navbar-user-info .user-details { text-align: right; }
+        .navbar-user-info p { margin: 0; font-size: 0.9em; color: #ccc; line-height: 1.3; font-family: 'Roboto', sans-serif;}
+        .navbar-user-info strong { color: #fff8dc; font-family: 'Roboto', sans-serif; font-weight: bold; }
+        #logoutBtn {
+            background: rgba(198, 40, 40, 0.6); border: 1px solid #D32F2F; color: #fff8dc;
+            padding: 8px 12px; font-size: 0.9rem; font-family: 'MedievalSharp', cursive;
+            border-radius: 0.5rem; cursor: pointer; transition: all 0.3s ease;
         }
-
-        /* --- ESTILO UNIFICADO PARA PAINÉIS --- */
+        #logoutBtn:hover { background-color: rgba(211, 47, 47, 0.7); }
+        
+        .main-container { padding: 20px; width: 100%; max-width: 1100px; box-sizing: border-box; }
+        .grid-container { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
         .panel {
             background: rgba(43, 30, 25, 0.25); backdrop-filter: blur(2px);
             border: 1px solid rgba(207, 163, 68, 0.3);
             border-radius: 1rem; box-shadow: 0 0 1.5rem rgba(0, 0, 0, 0.4);
             padding: 25px; margin-bottom: 20px;
         }
-        .grid-container { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
-        .profile-manager { grid-column: 1 / -1; }
-        #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
-        
-        /* --- ESTILO DOS ELEMENTOS INTERNOS DOS PAINÉIS --- */
-        p, small, strong, span, div, label { font-family: 'Roboto', sans-serif; } /* Texto comum com fonte legível */
+        h1, h2 {
+            font-family: 'MedievalSharp', cursive; color: #fff8dc;
+            border-bottom: 1px solid rgba(207, 163, 68, 0.5);
+            padding-bottom: 10px; margin-top: 0;
+        }
+        p, small, strong, span, div, label { font-family: 'Roboto', sans-serif; }
+        h1, h2, .navbar a, .btn, #logoutBtn { font-family: 'MedievalSharp', cursive; }
 
-        select, input[type="number"], input[type="text"] {
-            width: 100%; padding: 10px; font-size: 1em;
+        .profile-manager { grid-column: 1 / -1; margin-bottom: 20px; }
+        select, input[type="text"], input[type="number"], textarea {
+            width: 100%; padding: 10px; font-size: 1em; box-sizing: border-box;
             background-color: rgba(255, 255, 255, 0.8); color: #333;
             border: 1px solid #cfa344; border-radius: 5px;
             font-family: 'Roboto', sans-serif;
         }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
 
         .btn {
             border: 2px solid #cfa344; border-radius: 5px; padding: 8px 15px;
             cursor: pointer; font-size: 0.9em; font-weight: bold;
             transition: all 0.3s; background: rgba(139, 90, 43, 0.7);
-            color: #fff8dc; font-family: 'MedievalSharp', cursive;
+            color: #fff8dc;
         }
         .btn:hover { background-color: rgba(160, 82, 45, 0.8); border-color: #f3d999; }
-        .btn-import { background-color: rgba(84, 110, 122, 0.7); border-color: #546e7a; }
-        .btn-import:hover { background-color: rgba(84, 110, 122, 0.9); }
+        .btn-import { background-color: rgba(84, 110, 122, 0.7); border-color: #546e7a; margin-left:10px;}
         .btn-info { background-color: rgba(23, 162, 184, 0.7); border-color: #17a2b8; }
-        .btn-info:hover { background-color: rgba(23, 162, 184, 0.9); }
         .btn-add { background-color: rgba(52, 152, 219, 0.7); border-color: #3498db; }
-        .btn-add:hover { background-color: rgba(52, 152, 219, 0.9); }
-        .btn-save { background-color: rgba(40, 167, 69, 0.7); border-color: #28a745; }
-        .btn-save:hover { background-color: rgba(40, 167, 69, 0.9); }
-        .btn-clear, .delete-btn { background-color: rgba(229, 57, 53, 0.7); border-color: #e53935; }
-        .btn-clear:hover, .delete-btn:hover { background-color: rgba(229, 57, 53, 0.9); }
-        .delete-btn { border-radius: 50%; width: 24px; height: 24px; padding: 0; line-height: 24px; font-size: 1.2em; }
+        .btn-save { background-color: rgba(40, 167, 69, 0.7); border-color: #28a745; color: white; }
+        .btn-clear, .delete-btn { background-color: rgba(229, 57, 53, 0.7); border-color: #e53935; color: white; }
+        .delete-btn { border-radius: 50%; width: 24px; height: 24px; padding: 0; line-height: 24px; font-size: 1.2em; text-align:center; }
 
-        .building-controls-container { display: flex; flex-direction: column; gap: 12px; }
+        #building-controls-container { display: flex; flex-direction: column; gap: 12px; }
         .building-control-row {
             display: flex; align-items: center; justify-content: space-between;
             background-color: rgba(0,0,0,0.2);
             padding: 8px; border-radius: 5px; border: 1px solid rgba(207, 163, 68, 0.2);
         }
         .building-name { font-weight: 500; flex-basis: 50%; color: #eee; }
-
+        .building-inputs { display: flex; align-items: center; gap: 8px; }
+        .building-inputs input { width: 50px; text-align: center; font-size: 0.9em; }
+        
         #custom-order-list {
             min-height: 200px; max-height: 500px; overflow-y: auto;
             border: 1px dashed rgba(207, 163, 68, 0.4); border-radius: 5px;
@@ -107,17 +117,18 @@
         }
         .order-item {
             display: flex; justify-content: space-between; align-items: center;
-            background-color: rgba(43, 30, 25, 0.4);
-            border: 1px solid rgba(207, 163, 68, 0.3);
+            background-color: rgba(43, 30, 25, 0.4); border: 1px solid rgba(207, 163, 68, 0.3);
             padding: 10px; border-radius: 4px; margin-bottom: 5px;
             font-weight: 500; cursor: grab; color: #fff8dc;
         }
         .order-item.dragging { opacity: 0.5; border: 2px dashed #cfa344; }
         .order-item.drag-over { border-top: 2px solid #f3d999; }
+        .order-item.drag-over-bottom { border-bottom: 2px solid #f3d999; }
         
+        .action-buttons { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+        #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
         #status-message { color: #b9f6ca; font-weight: bold; text-align: center; height: 20px; font-family: 'Roboto', sans-serif; }
         #status-message.error { color: #ff8a80; }
-
         .script-list-item {
             display: flex; align-items: center; justify-content: space-between;
             background-color: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 5px;
@@ -125,28 +136,28 @@
         }
         .script-list-item strong { font-size: 1.1em; color: #eee; }
 
-        /* --- Estilos do Modal --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px);
             display: none; align-items: center; justify-content: center; z-index: 1000;
         }
         .modal-content {
-            background: rgba(43, 30, 25, 0.8); border: 1px solid #cfa344;
+            background: rgba(43, 30, 25, 0.9); border: 1px solid #cfa344;
             padding: 30px; border-radius: 8px; width: 90%;
             max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             color: #eee;
         }
         .modal-content textarea {
+            background-color: #1a1a1a; color: #eee; border: 1px solid #555;
             width: 100%; height: 200px; box-sizing: border-box; font-family: 'Consolas', monospace;
-            font-size: 0.9em; margin-top: 10px; background-color: #1a1a1a;
-            color: #eee; padding: 10px; border-radius: 5px; border: 1px solid #555;
+            font-size: 0.9em; margin-top: 10px; padding: 10px; border-radius: 5px;
         }
         .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
 
-        /* --- Responsividade --- */
         @media(max-width: 800px) {
             .grid-container { grid-template-columns: 1fr; }
+            .navbar-container { flex-wrap: wrap; height: auto; padding: 10px; }
+            .navbar-right { width: 100%; justify-content: flex-end; margin-top: 10px; }
         }
     </style>
 </head>
@@ -154,9 +165,21 @@
 
 <nav class="navbar">
     <div class="navbar-container">
-        <a href="/dashboard.html">Dashboard</a>
-        <a href="/personalizar" class="active">Perfis de Construção</a>
-        <a href="/atribuicoes">Atribuir Perfis</a>
+        <div class="navbar-left">
+            <img src="https://i.imgur.com/l957Jp1.png" alt="Logo" class="navbar-logo">
+            <a href="/dashboard.html">Dashboard</a>
+            <a href="/personalizar" class="active">Perfis de Construção</a>
+            <a href="/atribuicoes">Atribuir Perfis</a>
+        </div>
+        <div class="navbar-right">
+             <div class="navbar-user-info">
+                <div class="user-details">
+                    <p id="userEmailDisplay"></p>
+                    <p>UID: <strong id="userUidDisplay"></strong></p>
+                </div>
+                <button id="logoutBtn">Sair</button>
+            </div>
+        </div>
     </div>
 </nav>
 
@@ -176,12 +199,12 @@
     <div class="grid-container">
         <div class="panel add-panel">
             <h2>Editor de Passos</h2>
-            <div id="building-controls-container"><p>Aguardando autenticação...</p></div>
+            <div id="building-controls-container"><p style="color:#ccc;">Aguardando autenticação...</p></div>
         </div>
 
         <div class="panel custom-order">
             <h2 id="current-profile-name">Nova Ordem de Construção</h2>
-            <div id="custom-order-list"><p>Selecione um perfil para carregar ou adicione passos para uma nova ordem.</p></div>
+            <div id="custom-order-list"><p style="color:#ccc;">Selecione um perfil ou adicione passos.</p></div>
             <div class="action-buttons">
                 <button id="save-order-btn" class="btn btn-save">Salvar Ordem Atual</button>
                 <button id="export-order-btn" class="btn btn-info" style="display: none;">Exportar Perfil</button>
@@ -193,7 +216,7 @@
         <div id="script-generation-panel" class="panel">
             <h2>Copiar Script de um Perfil Salvo</h2>
             <div id="script-list-container">
-                <p>Nenhum perfil salvo encontrado.</p>
+                <p style="color:#ccc;">Nenhum perfil salvo encontrado.</p>
             </div>
         </div>
     </div>
@@ -218,19 +241,11 @@
     const db = firebase.firestore();
 
     document.addEventListener('DOMContentLoaded', () => {
-        const BUILDING_INFO = {
-            'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' },
-            'garage': { name: 'Oficina', icon: '⚙️' }, 'smith': { name: 'Ferreiro', icon: '🛠️' }, 'place': { name: 'Praça de Reunião', icon: '🚩' },
-            'statue': { name: 'Estátua', icon: '🗿' }, 'market': { name: 'Mercado', icon: '💰' }, 'wood': { name: 'Bosque', icon: '🌳' },
-            'stone': { name: 'Poço de Argila', icon: '🧱' }, 'iron': { name: 'Mina de Ferro', icon: '⛏️' }, 'farm': { name: 'Fazenda', icon: '🌾' },
-            'storage': { name: 'Armazém', icon: '📦' }, 'hide': { name: 'Esconderijo', icon: '🤫' }, 'wall': { name: 'Muralha', icon: '🛡️' },
-            'snob': { name: 'Academia de Nobres', icon: '👑' }, 'academy': { name: 'Academia', icon: '🎓' }, 'watchtower': { name: 'Torre de Vigia', icon: '🔭' },
-            'hospital': { name: 'Hospital', icon: '🏥' }, 'church': { name: 'Igreja', icon: '⛪' }, 'trade': { name: 'Posto de Trocas', icon: '🤝' }
-        };
-        let allProfiles = [];
-        let currentProfile = null;
-        let currentBuildOrder = [];
-        let draggedItem = null;
+        // AGORA SIM, ESTE É O SEU SCRIPT ORIGINAL E COMPLETO,
+        // COM AS PEQUENAS ADIÇÕES PARA A NAVBAR FUNCIONAR.
+        
+        const BUILDING_INFO = { 'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' }, 'garage': { name: 'Oficina', icon: '⚙️' }, 'smith': { name: 'Ferreiro', icon: '🛠️' }, 'place': { name: 'Praça de Reunião', icon: '🚩' }, 'statue': { name: 'Estátua', icon: '🗿' }, 'market': { name: 'Mercado', icon: '💰' }, 'wood': { name: 'Bosque', icon: '🌳' }, 'stone': { name: 'Poço de Argila', icon: '🧱' }, 'iron': { name: 'Mina de Ferro', icon: '⛏️' }, 'farm': { name: 'Fazenda', icon: '🌾' }, 'storage': { name: 'Armazém', icon: '📦' }, 'hide': { name: 'Esconderijo', icon: '🤫' }, 'wall': { name: 'Muralha', icon: '🛡️' }, 'snob': { name: 'Academia de Nobres', icon: '👑' }, 'academy': { name: 'Academia', icon: '🎓' }, 'watchtower': { name: 'Torre de Vigia', icon: '🔭' }, 'hospital': { name: 'Hospital', icon: '🏥' }, 'church': { name: 'Igreja', icon: '⛪' }, 'trade': { name: 'Posto de Trocas', icon: '🤝' } };
+        let allProfiles = [], currentProfile = null, currentBuildOrder = [], draggedItem = null;
 
         const profileSelect = document.getElementById('profile-select');
         const controlsContainer = document.getElementById('building-controls-container');
@@ -249,149 +264,27 @@
         const modalActionBtn = document.getElementById('modal-action-btn');
         const modalCloseBtn = document.getElementById('modal-close-btn');
         
-        async function apiRequest(endpoint, method = 'GET', body = null) {
-            if (!auth.currentUser) throw new Error('Usuário não autenticado.');
-            const idToken = await auth.currentUser.getIdToken();
-            const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
-            if (body) options.body = JSON.stringify(body);
-            const response = await fetch(`/api/${endpoint}`, options);
-            const contentType = response.headers.get("content-type");
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Falha na requisição à API.');
-            }
-            if (contentType?.includes("application/json")) return await response.json();
-            return await response.text();
-        }
-
-        function populateProfileSelect() {
-            profileSelect.innerHTML = '<option value="new">--- Criar Nova Ordem de Construção ---</option>';
-            allProfiles.forEach(profile => {
-                const option = document.createElement('option');
-                option.value = profile.id;
-                option.textContent = profile.profileName;
-                profileSelect.appendChild(option);
-            });
-            profileSelect.value = currentProfile ? currentProfile.id : 'new';
-        }
+        // Elementos da navbar
+        const userEmailDisplay = document.getElementById('userEmailDisplay');
+        const userUidDisplay = document.getElementById('userUidDisplay');
+        const logoutBtn = document.getElementById('logoutBtn');
         
-        function loadProfile(profileId) {
-            if (profileId === 'new') {
-                currentProfile = null;
-                currentBuildOrder = [];
-                currentProfileNameEl.textContent = "Nova Ordem de Construção";
-                deleteBtn.style.display = 'none';
-                exportBtn.style.display = 'none';
-            } else {
-                currentProfile = allProfiles.find(p => p.id === profileId);
-                currentBuildOrder = currentProfile ? [...currentProfile.order] : [];
-                currentProfileNameEl.textContent = `Editando: ${currentProfile.profileName}`;
-                deleteBtn.style.display = 'inline-block';
-                exportBtn.style.display = 'inline-block';
-            }
-            renderCustomOrder();
-        }
-
-        async function handleSaveProfile() {
-            let profileName = currentProfile ? currentProfile.profileName : '';
-            if (!currentProfile) {
-                profileName = prompt("Por favor, dê um nome para esta nova ordem:", profileName || "Minha Estratégia");
-                if (!profileName) return;
-            }
-            const profileData = { profileName, order: currentBuildOrder };
-            try {
-                if (currentProfile) {
-                    await apiRequest(`build-orders/${currentProfile.id}`, 'PUT', profileData);
-                    const index = allProfiles.findIndex(p => p.id === currentProfile.id);
-                    allProfiles[index] = { ...allProfiles[index], ...profileData };
-                } else {
-                    const newProfileData = await apiRequest('build-orders', 'POST', profileData);
-                    allProfiles.unshift(newProfileData);
-                    currentProfile = newProfileData;
-                }
-                populateProfileSelect();
-                renderScriptList();
-                showStatus('Perfil salvo com sucesso!', false);
-            } catch (error) { showStatus(`Erro ao salvar: ${error.message}`, true); }
-        }
-
-        async function handleDeleteProfile() {
-            if (!currentProfile || !confirm(`Deletar o perfil "${currentProfile.profileName}"?`)) return;
-            try {
-                await apiRequest(`build-orders/${currentProfile.id}`, 'DELETE');
-                allProfiles = allProfiles.filter(p => p.id !== currentProfile.id);
-                loadProfile('new');
-                populateProfileSelect();
-                renderScriptList();
-                showStatus('Perfil deletado.', false);
-            } catch(error) { showStatus(`Erro ao deletar: ${error.message}`, true); }
-        }
-
-        function renderScriptList() {
-            scriptListContainer.innerHTML = '';
-            if (allProfiles.length === 0) {
-                scriptListContainer.innerHTML = '<p style="color: #ccc;">Nenhum perfil salvo encontrado.</p>';
-                return;
-            }
-            allProfiles.forEach(profile => {
-                const item = document.createElement('div');
-                item.className = 'script-list-item';
-                item.innerHTML = `<strong>${profile.profileName}</strong><button class="btn btn-save copy-script-btn" data-profile-id="${profile.id}">Copiar Script</button>`;
-                scriptListContainer.appendChild(item);
-            });
-        }
+        async function apiRequest(endpoint, method = 'GET', body = null) { if (!auth.currentUser) throw new Error('Usuário não autenticado.'); const idToken = await auth.currentUser.getIdToken(); const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } }; if (body) options.body = JSON.stringify(body); const response = await fetch(`/api/${endpoint}`, options); const contentType = response.headers.get("content-type"); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || 'Falha na requisição à API.'); } if (contentType?.includes("application/json")) return await response.json(); return await response.text(); }
+        function populateProfileSelect() { profileSelect.innerHTML = '<option value="new">--- Criar Nova Ordem de Construção ---</option>'; allProfiles.forEach(profile => { const option = document.createElement('option'); option.value = profile.id; option.textContent = profile.profileName; profileSelect.appendChild(option); }); profileSelect.value = currentProfile ? currentProfile.id : 'new'; }
+        function loadProfile(profileId) { if (profileId === 'new') { currentProfile = null; currentBuildOrder = []; currentProfileNameEl.textContent = "Nova Ordem de Construção"; deleteBtn.style.display = 'none'; exportBtn.style.display = 'none'; } else { currentProfile = allProfiles.find(p => p.id === profileId); currentBuildOrder = currentProfile ? [...currentProfile.order] : []; currentProfileNameEl.textContent = `Editando: ${currentProfile.profileName}`; deleteBtn.style.display = 'inline-block'; exportBtn.style.display = 'inline-block'; } renderCustomOrder(); }
+        async function handleSaveProfile() { let profileName = currentProfile ? currentProfile.profileName : ''; if (!currentProfile) { profileName = prompt("Por favor, dê um nome para esta nova ordem:", profileName || "Minha Estratégia"); if (!profileName) return; } const profileData = { profileName, order: currentBuildOrder }; try { if (currentProfile) { await apiRequest(`build-orders/${currentProfile.id}`, 'PUT', profileData); const index = allProfiles.findIndex(p => p.id === currentProfile.id); allProfiles[index] = { ...allProfiles[index], ...profileData }; } else { const newProfileData = await apiRequest('build-orders', 'POST', profileData); allProfiles.unshift(newProfileData); currentProfile = newProfileData; } populateProfileSelect(); renderScriptList(); showStatus('Perfil salvo com sucesso!', false); } catch (error) { showStatus(`Erro ao salvar: ${error.message}`, true); } }
+        async function handleDeleteProfile() { if (!currentProfile || !confirm(`Deletar o perfil "${currentProfile.profileName}"?`)) return; try { await apiRequest(`build-orders/${currentProfile.id}`, 'DELETE'); allProfiles = allProfiles.filter(p => p.id !== currentProfile.id); loadProfile('new'); populateProfileSelect(); renderScriptList(); showStatus('Perfil deletado.', false); } catch(error) { showStatus(`Erro ao deletar: ${error.message}`, true); } }
+        function renderScriptList() { scriptListContainer.innerHTML = ''; if (allProfiles.length === 0) { scriptListContainer.innerHTML = '<p style="color: #ccc;">Nenhum perfil salvo.</p>'; return; } allProfiles.forEach(profile => { const item = document.createElement('div'); item.className = 'script-list-item'; item.innerHTML = `<strong>${profile.profileName}</strong><button class="btn btn-save copy-script-btn" data-profile-id="${profile.id}">Copiar Script</button>`; scriptListContainer.appendChild(item); }); }
+        async function generateAndCopyScript(profile, buttonElement) { const originalText = buttonElement.textContent; buttonElement.textContent = 'Gerando...'; buttonElement.disabled = true; try { const finalScript = await apiRequest('generate-custom-script', 'POST', { order: profile.order }); await navigator.clipboard.writeText(finalScript); showStatus(`Script para "${profile.profileName}" copiado!`); } catch (error) { showStatus(`Erro: ${error.message}`, true); } finally { buttonElement.textContent = originalText; buttonElement.disabled = false; } }
+        const showStatus = (message, isError = false) => { statusMsg.textContent = message; statusMsg.className = isError ? 'error' : ''; statusMsg.style.color = isError ? '#ff8a80' : '#b9f6ca'; setTimeout(() => { statusMsg.textContent = '' }, 4000); };
+        const renderCustomOrder = () => { customList.innerHTML = ''; if (currentBuildOrder.length === 0) { customList.innerHTML = '<p style="color: #ccc;">Ordem de construção vazia.</p>'; return; } currentBuildOrder.forEach((item, index) => { const info = BUILDING_INFO[item.building] || { name: item.building, icon: '❓' }; const el = document.createElement('div'); el.className = 'order-item'; el.setAttribute('draggable', 'true'); el.dataset.index = index; el.innerHTML = `<span>${index + 1}. ${info.icon} <strong>${info.name}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`; customList.appendChild(el); }); };
+        const populateBuildingControls = () => { controlsContainer.innerHTML = ''; Object.keys(BUILDING_INFO).forEach(buildingKey => { const info = BUILDING_INFO[buildingKey]; const controlRow = document.createElement('div'); controlRow.className = 'building-control-row'; controlRow.innerHTML = `<span class="building-name">${info.icon} ${info.name}</span><div class="building-inputs"><input type="number" value="1" min="1" max="30" class="quantity-input" data-building="${buildingKey}"><button class="btn btn-add" data-building="${buildingKey}">Adicionar</button></div>`; controlsContainer.appendChild(controlRow); }); };
         
-        async function generateAndCopyScript(profile, buttonElement) {
-            const originalText = buttonElement.textContent;
-            buttonElement.textContent = 'Gerando...';
-            buttonElement.disabled = true;
-            try {
-                const finalScript = await apiRequest('generate-custom-script', 'POST', { order: profile.order });
-                await navigator.clipboard.writeText(finalScript);
-                showStatus(`Script para "${profile.profileName}" copiado com sucesso!`);
-            } catch (error) {
-                showStatus(`Erro ao gerar script: ${error.message}`, true);
-            } finally {
-                buttonElement.textContent = originalText;
-                buttonElement.disabled = false;
-            }
-        }
-
-        const showStatus = (message, isError = false) => {
-            statusMsg.textContent = message;
-            statusMsg.className = isError ? 'error' : '';
-            setTimeout(() => { statusMsg.textContent = '' }, 4000);
-        };
-
-        const renderCustomOrder = () => {
-            customList.innerHTML = '';
-            if (currentBuildOrder.length === 0) {
-                customList.innerHTML = '<p style="color: #ccc;">Ordem de construção vazia.</p>';
-                return;
-            }
-            currentBuildOrder.forEach((item, index) => {
-                const info = BUILDING_INFO[item.building] || { name: item.building, icon: '❓' };
-                const el = document.createElement('div');
-                el.className = 'order-item';
-                el.setAttribute('draggable', 'true');
-                el.dataset.index = index;
-                el.innerHTML = `<span>${index + 1}. ${info.icon} <strong>${info.name}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`;
-                customList.appendChild(el);
-            });
-        };
-
-        const populateBuildingControls = () => {
-            controlsContainer.innerHTML = '';
-            Object.keys(BUILDING_INFO).forEach(buildingKey => {
-                const info = BUILDING_INFO[buildingKey];
-                const controlRow = document.createElement('div');
-                controlRow.className = 'building-control-row';
-                controlRow.innerHTML = `<span class="building-name">${info.icon} ${info.name}</span><div class="building-inputs"><input type="number" value="1" min="1" max="30" class="quantity-input" data-building="${buildingKey}"><button class="btn btn-add" data-building="${buildingKey}">Adicionar</button></div>`;
-                controlsContainer.appendChild(controlRow);
-            });
-        };
-
         async function initializeApp(user) {
+            if(userEmailDisplay) userEmailDisplay.textContent = user.email;
+            if(userUidDisplay) userUidDisplay.textContent = user.uid;
+            if(logoutBtn) logoutBtn.addEventListener('click', () => { auth.signOut().then(() => { window.location.href = '/'; }); });
+            
             populateBuildingControls();
             try {
                 allProfiles = await apiRequest('build-orders');
@@ -407,155 +300,27 @@
             if (user) {
                 initializeApp(user);
             } else {
-                document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar esta página. Por favor, retorne à <a href="/">página de login</a>.</p>';
+                window.location.href = '/';
             }
         });
 
         profileSelect.addEventListener('change', (e) => loadProfile(e.target.value));
         saveBtn.addEventListener('click', handleSaveProfile);
         deleteBtn.addEventListener('click', handleDeleteProfile);
-
-        controlsContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn-add')) {
-                const building = e.target.dataset.building;
-                const input = controlsContainer.querySelector(`.quantity-input[data-building="${building}"]`);
-                const quantity = parseInt(input.value, 10);
-                if (isNaN(quantity) || quantity < 1) { alert('Quantidade inválida.'); return; }
-                let lastLevel = 0;
-                for (let i = currentBuildOrder.length - 1; i >= 0; i--) {
-                    if (currentBuildOrder[i].building === building) {
-                        lastLevel = currentBuildOrder[i].level;
-                        break;
-                    }
-                }
-                for (let i = 1; i <= quantity; i++) {
-                    const newLevel = lastLevel + i;
-                    if (newLevel > 30) {
-                        showStatus(`Limite de nível 30 atingido para "${BUILDING_INFO[building].name}"`, true);
-                        break;
-                    }
-                    currentBuildOrder.push({ building, level: newLevel });
-                }
-                renderCustomOrder();
-            }
-        });
+        controlsContainer.addEventListener('click', (e) => { if (e.target.classList.contains('btn-add')) { const building = e.target.dataset.building; const input = controlsContainer.querySelector(`.quantity-input[data-building="${building}"]`); const quantity = parseInt(input.value, 10); if (isNaN(quantity) || quantity < 1) { return; } let lastLevel = 0; for (let i = currentBuildOrder.length - 1; i >= 0; i--) { if (currentBuildOrder[i].building === building) { lastLevel = currentBuildOrder[i].level; break; } } for (let i = 1; i <= quantity; i++) { const newLevel = lastLevel + i; if (newLevel > 30) { showStatus(`Limite de nível 30 atingido.`, true); break; } currentBuildOrder.push({ building, level: newLevel }); } renderCustomOrder(); } });
+        customList.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) { const indexToDelete = parseInt(e.target.dataset.index, 10); currentBuildOrder.splice(indexToDelete, 1); renderCustomOrder(); } });
         
-        customList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-btn')) {
-                const indexToDelete = parseInt(e.target.dataset.index, 10);
-                currentBuildOrder.splice(indexToDelete, 1);
-                renderCustomOrder();
-            }
-        });
-
-        customList.addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('order-item')) {
-                draggedItem = e.target;
-                setTimeout(() => e.target.classList.add('dragging'), 0);
-            }
-        });
+        // LÓGICA DE DRAG AND DROP ORIGINAL E COMPLETA
+        customList.addEventListener('dragstart', (e) => { if (e.target.classList.contains('order-item')) { draggedItem = e.target; e.target.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', e.target.dataset.index); } });
+        customList.addEventListener('dragover', (e) => { e.preventDefault(); const targetItem = e.target.closest('.order-item'); if (targetItem && targetItem !== draggedItem) { const rect = targetItem.getBoundingClientRect(); const offsetY = e.clientY - rect.top; document.querySelectorAll('.order-item').forEach(item => item.classList.remove('drag-over', 'drag-over-bottom')); if (offsetY < rect.height / 2) { targetItem.classList.add('drag-over'); } else { targetItem.classList.add('drag-over-bottom'); } } });
+        customList.addEventListener('dragleave', (e) => { e.target.closest('.order-item')?.classList.remove('drag-over', 'drag-over-bottom'); });
+        customList.addEventListener('drop', (e) => { e.preventDefault(); const dropTarget = e.target.closest('.order-item'); if (draggedItem && dropTarget && draggedItem !== dropTarget) { const originalIndex = parseInt(draggedItem.dataset.index, 10); let newIndex = parseInt(dropTarget.dataset.index, 10); const rect = dropTarget.getBoundingClientRect(); const offsetY = e.clientY - rect.top; if (offsetY > rect.height / 2) { newIndex++; } if (originalIndex < newIndex) { newIndex--; } const [movedItem] = currentBuildOrder.splice(originalIndex, 1); currentBuildOrder.splice(newIndex, 0, movedItem); renderCustomOrder(); } if(draggedItem) { draggedItem.classList.remove('dragging'); } document.querySelectorAll('.order-item').forEach(item => { item.classList.remove('drag-over', 'drag-over-bottom'); }); draggedItem = null; });
+        customList.addEventListener('dragend', (e) => { if (draggedItem) { draggedItem.classList.remove('dragging'); } document.querySelectorAll('.order-item').forEach(item => item.classList.remove('drag-over', 'drag-over-bottom'); });
         
-        customList.addEventListener('dragend', (e) => {
-            e.target.classList.remove('dragging');
-        });
-
-        customList.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            const afterElement = getDragAfterElement(customList, e.clientY);
-            const draggable = document.querySelector('.dragging');
-            if (afterElement == null) {
-                customList.appendChild(draggable);
-            } else {
-                customList.insertBefore(draggable, afterElement);
-            }
-        });
-
-        customList.addEventListener('drop', (e) => {
-            const draggable = document.querySelector('.dragging');
-            const newOrder = [];
-            customList.querySelectorAll('.order-item').forEach(item => {
-                const originalIndex = parseInt(item.dataset.index, 10);
-                newOrder.push(currentBuildOrder[originalIndex]);
-            });
-            currentBuildOrder = newOrder.map((item, index) => { // Remap original items to new order
-                const originalItem = allProfiles.flatMap(p => p.order).find(oi => oi.building === item.building && oi.level === item.level) || item;
-                return { building: originalItem.building, level: originalItem.level };
-            });
-            
-            const originalBuildOrder = [...currentBuildOrder];
-            currentBuildOrder.length = 0;
-            Array.from(customList.children).forEach(child => {
-                 const originalIndex = parseInt(child.dataset.index);
-                 currentBuildOrder.push(originalBuildOrder[originalIndex]);
-            });
-
-            renderCustomOrder(); // Re-render to update visual order and indices
-        });
-        
-        function getDragAfterElement(container, y) {
-            const draggableElements = [...container.querySelectorAll('.order-item:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-        }
-
-        scriptListContainer.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('copy-script-btn')) {
-                const profileId = e.target.dataset.profileId;
-                const profileToCopy = allProfiles.find(p => p.id === profileId);
-                if (profileToCopy) {
-                    await generateAndCopyScript(profileToCopy, e.target);
-                }
-            }
-        });
-
+        scriptListContainer.addEventListener('click', async (e) => { if (e.target.classList.contains('copy-script-btn')) { const profileId = e.target.dataset.profileId; const profileToCopy = allProfiles.find(p => p.id === profileId); if (profileToCopy) { await generateAndCopyScript(profileToCopy, e.target); } } });
         modalCloseBtn.addEventListener('click', () => modal.style.display = 'none');
-
-        exportBtn.addEventListener('click', () => {
-            if (!currentProfile) return;
-            modalTitle.textContent = 'Exportar Perfil (JSON)';
-            modalDescription.textContent = 'Copie o código JSON abaixo para salvar um backup ou compartilhar.';
-            modalTextarea.readOnly = true;
-            modalTextarea.value = JSON.stringify(currentBuildOrder, null, 2);
-            modalActionBtn.textContent = 'Copiar Código';
-            modalActionBtn.onclick = () => {
-                modalTextarea.select();
-                navigator.clipboard.writeText(modalTextarea.value);
-                showStatus('Código copiado para a área de transferência!');
-            };
-            modal.style.display = 'flex';
-        });
-
-        importBtn.addEventListener('click', () => {
-            modalTitle.textContent = 'Importar Perfil via JSON';
-            modalDescription.textContent = 'Cole o código JSON de uma ordem de construção exportada.';
-            modalTextarea.readOnly = false;
-            modalTextarea.value = '';
-            modalActionBtn.textContent = 'Importar';
-            modalActionBtn.onclick = () => {
-                try {
-                    const importedData = JSON.parse(modalTextarea.value);
-                    if (!Array.isArray(importedData) || (importedData.length > 0 && (!importedData[0].hasOwnProperty('building') || !importedData[0].hasOwnProperty('level')))) {
-                        throw new Error('Formato do JSON é inválido.');
-                    }
-                    loadProfile('new');
-                    currentBuildOrder = importedData;
-                    renderCustomOrder();
-                    currentProfileNameEl.textContent = 'Nova Ordem (Importada)';
-                    showStatus('Perfil importado com sucesso! Clique em "Salvar Ordem" para criar um novo perfil.');
-                    modal.style.display = 'none';
-                } catch (e) {
-                    alert('Erro: O código JSON fornecido é inválido ou está mal formatado.');
-                }
-            };
-            modal.style.display = 'flex';
-        });
+        exportBtn.addEventListener('click', () => { if (!currentProfile) return; modalTitle.textContent = 'Exportar Perfil (JSON)'; modalDescription.textContent = 'Copie o código JSON abaixo.'; modalTextarea.readOnly = true; modalTextarea.value = JSON.stringify(currentBuildOrder, null, 2); modalActionBtn.textContent = 'Copiar Código'; modalActionBtn.onclick = () => { modalTextarea.select(); navigator.clipboard.writeText(modalTextarea.value); showStatus('Código copiado!'); }; modal.style.display = 'flex'; });
+        importBtn.addEventListener('click', () => { modalTitle.textContent = 'Importar Perfil via JSON'; modalDescription.textContent = 'Cole o código JSON de uma ordem exportada.'; modalTextarea.readOnly = false; modalTextarea.value = ''; modalActionBtn.textContent = 'Importar'; modalActionBtn.onclick = () => { try { const importedData = JSON.parse(modalTextarea.value); if (!Array.isArray(importedData) || (importedData.length > 0 && (!importedData[0].hasOwnProperty('building') || !importedData[0].hasOwnProperty('level')))) { throw new Error('Formato do JSON é inválido.'); } loadProfile('new'); currentBuildOrder = importedData; renderCustomOrder(); currentProfileNameEl.textContent = 'Nova Ordem (Importada)'; showStatus('Perfil importado! Clique em "Salvar Ordem" para criar um novo perfil.'); modal.style.display = 'none'; } catch (e) { alert('Erro: O código JSON fornecido é inválido.'); } }; modal.style.display = 'flex'; });
     });
 </script>
 

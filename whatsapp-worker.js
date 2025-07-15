@@ -105,41 +105,43 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
     });
 
     app.post('/send-message', async (req, res) => {
-        const { number, message } = req.body;
-        if (!number || !message) {
-            return res.status(400).json({ error: 'Número e mensagem são obrigatórios.' });
+    const { number, message } = req.body;
+    if (!number || !message) {
+        return res.status(400).json({ error: 'Número e mensagem são obrigatórios.' });
+    }
+
+    const chatId = `${number.replace(/\D/g, '')}@c.us`;
+    try {
+        const isRegistered = await client.isRegisteredUser(chatId);
+        if (!isRegistered) {
+            console.error(`[WORKER] ❌ Número não registrado no WhatsApp: ${number}`);
+            return res.status(404).json({ success: false, error: 'Número não tem WhatsApp.' });
         }
 
-        const chatId = `${number.replace(/\D/g, '')}@c.us`;
-        try {
-            const isRegistered = await client.isRegisteredUser(chatId);
-            if (!isRegistered) {
-                console.error(`[WORKER] ❌ Número não registrado no WhatsApp: ${number}`);
-                return res.status(404).json({ success: false, error: 'Número não tem WhatsApp.' });
-            }
+        const chat = await client.getChatById(chatId);
+        await chat.sendStateTyping();
 
-            const chat = await client.getChatById(chatId);
-            await chat.sendStateTyping();
+        const delay = Math.floor(Math.random() * 3000) + 1000;
+        setTimeout(async () => {
+            await client.sendMessage(chatId, {
+                text: message,
+                buttons: [
+                    {
+                        buttonId: 'botao_recebido',
+                        buttonText: { displayText: '✅ Recebido' },
+                        type: 1
+                    }
+                ],
+                footer: 'Toque no botão para confirmar',
+                headerType: 1
+            });
+            await chat.clearState();
+        }, delay);
 
-            const delay = Math.floor(Math.random() * 3000) + 1000;
-            setTimeout(async () => {
-                await client.sendMessage(chatId, message);
-                await chat.clearState();
-            }, delay);
+        res.status(200).json({ success: true, message: 'Ordem de envio recebida com botão.' });
 
-            res.status(200).json({ success: true, message: 'Ordem de envio recebida.' });
-
-        } catch (error) {
-            console.error(`[WORKER ERROR] ❌ Erro ao enviar mensagem para ${number}:`, error);
-            res.status(500).json({ success: false, error: 'Erro interno ao processar mensagem.' });
-        }
-    });
-
-    app.listen(PORT, () => {
-        console.log(`[WORKER] 🌐 Servidor do Worker rodando na porta ${PORT}`);
-    });
-
-}).catch(err => {
-    console.error('[WORKER CRITICAL] ❌ Erro ao conectar ao MongoDB. Encerrando Worker.', err);
-    process.exit(1);
+    } catch (error) {
+        console.error(`[WORKER ERROR] ❌ Erro ao enviar mensagem para ${number}:`, error);
+        res.status(500).json({ success: false, error: 'Erro interno ao processar mensagem.' });
+    }
 });

@@ -241,9 +241,7 @@
     const db = firebase.firestore();
 
     document.addEventListener('DOMContentLoaded', () => {
-        // AGORA SIM, ESTE É O SEU SCRIPT ORIGINAL E COMPLETO,
-        // COM AS PEQUENAS ADIÇÕES PARA A NAVBAR FUNCIONAR.
-        
+        // --- SEU SCRIPT ORIGINAL E COMPLETO ESTÁ AQUI ---
         const BUILDING_INFO = { 'main': { name: 'Edifício Principal', icon: '🏛️' }, 'barracks': { name: 'Quartel', icon: '⚔️' }, 'stable': { name: 'Estábulo', icon: '🐎' }, 'garage': { name: 'Oficina', icon: '⚙️' }, 'smith': { name: 'Ferreiro', icon: '🛠️' }, 'place': { name: 'Praça de Reunião', icon: '🚩' }, 'statue': { name: 'Estátua', icon: '🗿' }, 'market': { name: 'Mercado', icon: '💰' }, 'wood': { name: 'Bosque', icon: '🌳' }, 'stone': { name: 'Poço de Argila', icon: '🧱' }, 'iron': { name: 'Mina de Ferro', icon: '⛏️' }, 'farm': { name: 'Fazenda', icon: '🌾' }, 'storage': { name: 'Armazém', icon: '📦' }, 'hide': { name: 'Esconderijo', icon: '🤫' }, 'wall': { name: 'Muralha', icon: '🛡️' }, 'snob': { name: 'Academia de Nobres', icon: '👑' }, 'academy': { name: 'Academia', icon: '🎓' }, 'watchtower': { name: 'Torre de Vigia', icon: '🔭' }, 'hospital': { name: 'Hospital', icon: '🏥' }, 'church': { name: 'Igreja', icon: '⛪' }, 'trade': { name: 'Posto de Trocas', icon: '🤝' } };
         let allProfiles = [], currentProfile = null, currentBuildOrder = [], draggedItem = null;
 
@@ -264,7 +262,7 @@
         const modalActionBtn = document.getElementById('modal-action-btn');
         const modalCloseBtn = document.getElementById('modal-close-btn');
         
-        // Elementos da navbar
+        // --- ADIÇÃO: Elementos da nova navbar ---
         const userEmailDisplay = document.getElementById('userEmailDisplay');
         const userUidDisplay = document.getElementById('userUidDisplay');
         const logoutBtn = document.getElementById('logoutBtn');
@@ -276,15 +274,19 @@
         async function handleDeleteProfile() { if (!currentProfile || !confirm(`Deletar o perfil "${currentProfile.profileName}"?`)) return; try { await apiRequest(`build-orders/${currentProfile.id}`, 'DELETE'); allProfiles = allProfiles.filter(p => p.id !== currentProfile.id); loadProfile('new'); populateProfileSelect(); renderScriptList(); showStatus('Perfil deletado.', false); } catch(error) { showStatus(`Erro ao deletar: ${error.message}`, true); } }
         function renderScriptList() { scriptListContainer.innerHTML = ''; if (allProfiles.length === 0) { scriptListContainer.innerHTML = '<p style="color: #ccc;">Nenhum perfil salvo.</p>'; return; } allProfiles.forEach(profile => { const item = document.createElement('div'); item.className = 'script-list-item'; item.innerHTML = `<strong>${profile.profileName}</strong><button class="btn btn-save copy-script-btn" data-profile-id="${profile.id}">Copiar Script</button>`; scriptListContainer.appendChild(item); }); }
         async function generateAndCopyScript(profile, buttonElement) { const originalText = buttonElement.textContent; buttonElement.textContent = 'Gerando...'; buttonElement.disabled = true; try { const finalScript = await apiRequest('generate-custom-script', 'POST', { order: profile.order }); await navigator.clipboard.writeText(finalScript); showStatus(`Script para "${profile.profileName}" copiado!`); } catch (error) { showStatus(`Erro: ${error.message}`, true); } finally { buttonElement.textContent = originalText; buttonElement.disabled = false; } }
-        const showStatus = (message, isError = false) => { statusMsg.textContent = message; statusMsg.className = isError ? 'error' : ''; statusMsg.style.color = isError ? '#ff8a80' : '#b9f6ca'; setTimeout(() => { statusMsg.textContent = '' }, 4000); };
+        const showStatus = (message, isError = false) => { statusMsg.textContent = message; statusMsg.className = isError ? 'error' : 'success'; statusMsg.style.color = isError ? '#ff8a80' : '#b9f6ca'; setTimeout(() => { statusMsg.textContent = '' }, 4000); };
         const renderCustomOrder = () => { customList.innerHTML = ''; if (currentBuildOrder.length === 0) { customList.innerHTML = '<p style="color: #ccc;">Ordem de construção vazia.</p>'; return; } currentBuildOrder.forEach((item, index) => { const info = BUILDING_INFO[item.building] || { name: item.building, icon: '❓' }; const el = document.createElement('div'); el.className = 'order-item'; el.setAttribute('draggable', 'true'); el.dataset.index = index; el.innerHTML = `<span>${index + 1}. ${info.icon} <strong>${info.name}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`; customList.appendChild(el); }); };
         const populateBuildingControls = () => { controlsContainer.innerHTML = ''; Object.keys(BUILDING_INFO).forEach(buildingKey => { const info = BUILDING_INFO[buildingKey]; const controlRow = document.createElement('div'); controlRow.className = 'building-control-row'; controlRow.innerHTML = `<span class="building-name">${info.icon} ${info.name}</span><div class="building-inputs"><input type="number" value="1" min="1" max="30" class="quantity-input" data-building="${buildingKey}"><button class="btn btn-add" data-building="${buildingKey}">Adicionar</button></div>`; controlsContainer.appendChild(controlRow); }); };
         
         async function initializeApp(user) {
+            // Lógica da navbar
             if(userEmailDisplay) userEmailDisplay.textContent = user.email;
             if(userUidDisplay) userUidDisplay.textContent = user.uid;
-            if(logoutBtn) logoutBtn.addEventListener('click', () => { auth.signOut().then(() => { window.location.href = '/'; }); });
+            if(logoutBtn) logoutBtn.addEventListener('click', () => {
+                auth.signOut().then(() => { window.location.href = '/'; });
+            });
             
+            // Lógica original da página
             populateBuildingControls();
             try {
                 allProfiles = await apiRequest('build-orders');
@@ -304,25 +306,22 @@
             }
         });
 
+        // Event Listeners originais
         profileSelect.addEventListener('change', (e) => loadProfile(e.target.value));
         saveBtn.addEventListener('click', handleSaveProfile);
         deleteBtn.addEventListener('click', handleDeleteProfile);
         controlsContainer.addEventListener('click', (e) => { if (e.target.classList.contains('btn-add')) { const building = e.target.dataset.building; const input = controlsContainer.querySelector(`.quantity-input[data-building="${building}"]`); const quantity = parseInt(input.value, 10); if (isNaN(quantity) || quantity < 1) { return; } let lastLevel = 0; for (let i = currentBuildOrder.length - 1; i >= 0; i--) { if (currentBuildOrder[i].building === building) { lastLevel = currentBuildOrder[i].level; break; } } for (let i = 1; i <= quantity; i++) { const newLevel = lastLevel + i; if (newLevel > 30) { showStatus(`Limite de nível 30 atingido.`, true); break; } currentBuildOrder.push({ building, level: newLevel }); } renderCustomOrder(); } });
         customList.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) { const indexToDelete = parseInt(e.target.dataset.index, 10); currentBuildOrder.splice(indexToDelete, 1); renderCustomOrder(); } });
-        
-        // LÓGICA DE DRAG AND DROP ORIGINAL E COMPLETA
         customList.addEventListener('dragstart', (e) => { if (e.target.classList.contains('order-item')) { draggedItem = e.target; e.target.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', e.target.dataset.index); } });
         customList.addEventListener('dragover', (e) => { e.preventDefault(); const targetItem = e.target.closest('.order-item'); if (targetItem && targetItem !== draggedItem) { const rect = targetItem.getBoundingClientRect(); const offsetY = e.clientY - rect.top; document.querySelectorAll('.order-item').forEach(item => item.classList.remove('drag-over', 'drag-over-bottom')); if (offsetY < rect.height / 2) { targetItem.classList.add('drag-over'); } else { targetItem.classList.add('drag-over-bottom'); } } });
         customList.addEventListener('dragleave', (e) => { e.target.closest('.order-item')?.classList.remove('drag-over', 'drag-over-bottom'); });
         customList.addEventListener('drop', (e) => { e.preventDefault(); const dropTarget = e.target.closest('.order-item'); if (draggedItem && dropTarget && draggedItem !== dropTarget) { const originalIndex = parseInt(draggedItem.dataset.index, 10); let newIndex = parseInt(dropTarget.dataset.index, 10); const rect = dropTarget.getBoundingClientRect(); const offsetY = e.clientY - rect.top; if (offsetY > rect.height / 2) { newIndex++; } if (originalIndex < newIndex) { newIndex--; } const [movedItem] = currentBuildOrder.splice(originalIndex, 1); currentBuildOrder.splice(newIndex, 0, movedItem); renderCustomOrder(); } if(draggedItem) { draggedItem.classList.remove('dragging'); } document.querySelectorAll('.order-item').forEach(item => { item.classList.remove('drag-over', 'drag-over-bottom'); }); draggedItem = null; });
-        customList.addEventListener('dragend', (e) => { if (draggedItem) { draggedItem.classList.remove('dragging'); } document.querySelectorAll('.order-item').forEach(item => item.classList.remove('drag-over', 'drag-over-bottom'); });
-        
+        customList.addEventListener('dragend', (e) => { if (draggedItem) { draggedItem.classList.remove('dragging'); } document.querySelectorAll('.order-item').forEach(item => { item.classList.remove('drag-over', 'drag-over-bottom'); }); });
         scriptListContainer.addEventListener('click', async (e) => { if (e.target.classList.contains('copy-script-btn')) { const profileId = e.target.dataset.profileId; const profileToCopy = allProfiles.find(p => p.id === profileId); if (profileToCopy) { await generateAndCopyScript(profileToCopy, e.target); } } });
         modalCloseBtn.addEventListener('click', () => modal.style.display = 'none');
         exportBtn.addEventListener('click', () => { if (!currentProfile) return; modalTitle.textContent = 'Exportar Perfil (JSON)'; modalDescription.textContent = 'Copie o código JSON abaixo.'; modalTextarea.readOnly = true; modalTextarea.value = JSON.stringify(currentBuildOrder, null, 2); modalActionBtn.textContent = 'Copiar Código'; modalActionBtn.onclick = () => { modalTextarea.select(); navigator.clipboard.writeText(modalTextarea.value); showStatus('Código copiado!'); }; modal.style.display = 'flex'; });
         importBtn.addEventListener('click', () => { modalTitle.textContent = 'Importar Perfil via JSON'; modalDescription.textContent = 'Cole o código JSON de uma ordem exportada.'; modalTextarea.readOnly = false; modalTextarea.value = ''; modalActionBtn.textContent = 'Importar'; modalActionBtn.onclick = () => { try { const importedData = JSON.parse(modalTextarea.value); if (!Array.isArray(importedData) || (importedData.length > 0 && (!importedData[0].hasOwnProperty('building') || !importedData[0].hasOwnProperty('level')))) { throw new Error('Formato do JSON é inválido.'); } loadProfile('new'); currentBuildOrder = importedData; renderCustomOrder(); currentProfileNameEl.textContent = 'Nova Ordem (Importada)'; showStatus('Perfil importado! Clique em "Salvar Ordem" para criar um novo perfil.'); modal.style.display = 'none'; } catch (e) { alert('Erro: O código JSON fornecido é inválido.'); } }; modal.style.display = 'flex'; });
     });
 </script>
-
 </body>
 </html>

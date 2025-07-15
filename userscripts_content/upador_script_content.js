@@ -40,7 +40,7 @@
         const hardcodedConfig = {}; // Suas configs injetadas podem estar aqui
         const hardcodedApiKey = "";   // Sua API key injetada pode estar aqui
 
-        let storedConfig = GM_getValue("FIREBASE_CLIENT_CONFIG", null);
+                let storedConfig = GM_getValue("FIREBASE_CLIENT_CONFIG", null);
         let storedApiKey = GM_getValue("USERSCRIPT_API_KEY", null);
 
         // Se as chaves já estão salvas localmente, usa elas.
@@ -50,7 +50,7 @@
             console.log('[TW Script] Configurações carregadas do armazenamento local.');
             return true;
         }
-        
+
         // Se não, tenta migrar as chaves que foram injetadas na primeira instalação.
         if (Object.keys(hardcodedConfig).length > 0 && hardcodedApiKey) {
             GM_setValue("FIREBASE_CLIENT_CONFIG", hardcodedConfig);
@@ -248,17 +248,17 @@
     }
 
     async function Proxima_Construcao() {
-    let proximoEdificio = await getConstrucao_proximo_edificio();
-    if (proximoEdificio) {
-        // Verifica se o botão está clicável e visível
-        let isClickable = !proximoEdificio.classList.contains('btn-disabled');
-        let isVisible = proximoEdificio.offsetWidth > 0 && proximoEdificio.offsetHeight > 0;
-        if (isClickable && isVisible) {
-            let delay = Math.floor(Math.random() * (Max_Tempo_Espera - Min_Tempo_Espera) + Min_Tempo_Espera);
-            setTimeout(() => proximoEdificio.click(), delay);
+        let proximoEdificio = await getConstrucao_proximo_edificio();
+        if (proximoEdificio) {
+            // Verifica se o botão está clicável e visível
+            let isClickable = !proximoEdificio.classList.contains('btn-disabled');
+            let isVisible = proximoEdificio.offsetWidth > 0 && proximoEdificio.offsetHeight > 0;
+            if (isClickable && isVisible) {
+                let delay = Math.floor(Math.random() * (Max_Tempo_Espera - Min_Tempo_Espera) + Min_Tempo_Espera);
+                setTimeout(() => proximoEdificio.click(), delay);
+            }
         }
     }
-}
 
     async function getConstrucao_proximo_edificio() {
         let sequencia = await getDynamicBuildOrder();
@@ -349,40 +349,41 @@
         main();
     }
     async function main() {
-    console.log("-- Script do Tribal Wars v1.0.0 ativado --");
+        console.log("-- Script do Tribal Wars v2.0.1 ativado --");
 
-    initializeFirebase();
-    registerNickname();
+        initializeFirebase();
+        registerNickname();
 
-    if (Auto_Refresh_Ativado) {
-        setInterval(() => { location.reload(); }, Intervalo_Refresh_Minutos * 60 * 1000);
-    }
-
-    // CORREÇÃO: A coleta de recompensas é chamada aqui, no início.
-    esperarQuestlines(abrirRecompensas);
-
-    // A lógica de construção só roda se estivermos no Ed. Principal
-    if (document.location.href.includes("screen=main")) {
-        setInterval(Proxima_Construcao, 2500);
-    } else {
-        // Se não estiver, tenta navegar para lá (opcional, pode ser removido se preferir)
-        // document.querySelector("#l_main a")?.click();
-    }
-
-    // Lógica para "Completar Gratis"
-    setInterval(() => {
-        var tr = $('#buildqueue').find('tr').eq(1);
-        if (tr.length > 0) {
-            var timeSplit = tr.find('td').eq(1).find('span').eq(0).text().split(':');
-            if (timeSplit.length >= 3 && (parseInt(timeSplit[0])*3600 + parseInt(timeSplit[1])*60 + parseInt(timeSplit[2])) < 180) {
-                tr.find('td').eq(2).find('a').eq(2).click();
-                setTimeout(() => {
-                    $('.btn-confirm-yes').click();
-                    // Coleta recompensas novamente após completar grátis
-                    setTimeout(abrirRecompensas, 1000);
-                }, 500);
-            }
+        if (Auto_Refresh_Ativado) {
+            setInterval(() => { location.reload(); }, Intervalo_Refresh_Minutos * 60 * 1000);
         }
-    }, 3000);
+
+        // CORREÇÃO: A coleta de recompensas é chamada aqui, no início.
+        esperarQuestlines(abrirRecompensas);
+
+        // A lógica de construção só roda se estivermos no Ed. Principal
+        if (document.location.href.includes("screen=main")) {
+            setInterval(Proxima_Construcao, 2500);
+        } else {
+            // Se não estiver, tenta navegar para lá (opcional, pode ser removido se preferir)
+            // document.querySelector("#l_main a")?.click();
+        }
+
+        // Lógica para "Completar Gratis"
+        setInterval(() => {
+            var tr = $('#buildqueue').find('tr').eq(1);
+            if (tr.length > 0) {
+                var timeSplit = tr.find('td').eq(1).find('span').eq(0).text().split(':');
+                if (timeSplit.length >= 3 && (parseInt(timeSplit[0])*3600 + parseInt(timeSplit[1])*60 + parseInt(timeSplit[2])) < 180) {
+                    tr.find('td').eq(2).find('a').eq(2).click();
+                    setTimeout(() => {
+                        $('.btn-confirm-yes').click();
+                        // Coleta recompensas novamente após completar grátis
+                        setTimeout(abrirRecompensas, 1000);
+                    }, 500);
+                }
+            }
+        }, 3000);
+    } // <-- AQUI ESTAVA FALTANDO A CHAVE DE FECHAMENTO
 
 })();

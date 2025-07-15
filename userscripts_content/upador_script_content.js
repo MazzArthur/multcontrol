@@ -1,10 +1,12 @@
 // ==UserScript==
-// @name         Upador Automático v1.0 - Final
+// @name         Upador Automático v2.0 - Auto-Update Inteligente
 // @icon         https://i.imgur.com/7WgHTT8.gif
-// @description  Script que busca a ordem de construção dinamicamente da plataforma MULTCONTROL, coleta recompensas e mais.
+// @description  Script com atualizações automáticas que se conecta à plataforma MULTCONTROL.
 // @author       MazzArthur
 // @include      http*://*.*game.php*
-// @version      1.0.0
+// @version      2.0.0
+// @updateURL    https://multcontrol.onrender.com/scripts/upador.meta.js
+// @downloadURL  https://multcontrol.onrender.com/scripts/upador.user.js
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        unsafeWindow
@@ -26,15 +28,43 @@
     const Intervalo_Refresh_Minutos = 30;
     const API_BASE_URL = "https://multcontrol.onrender.com";
 
-    // --- CAMPOS INJETADOS PELA PLATAFORMA ---
-    const FIREBASE_CLIENT_CONFIG = {};
-    const USERSCRIPT_API_KEY = "";
-
     // --- VARIÁVEIS DE CONTROLE ---
     var authClient;
     const Visualizacao_Geral = "OVERVIEW_VIEW";
     const Edificio_Principal = "HEADQUARTERS_VIEW";
+    
+    // ============================================================================
+    // == NOVA LÓGICA DE CONFIGURAÇÃO E MIGRAÇÃO DE CHAVES ==
+    // ============================================================================
+    function setupConfig() {
+        const hardcodedConfig = {}; // Suas configs injetadas podem estar aqui
+        const hardcodedApiKey = "";   // Sua API key injetada pode estar aqui
 
+        let storedConfig = GM_getValue("FIREBASE_CLIENT_CONFIG", null);
+        let storedApiKey = GM_getValue("USERSCRIPT_API_KEY", null);
+
+        // Se as chaves já estão salvas localmente, usa elas.
+        if (storedConfig && storedApiKey) {
+            FIREBASE_CLIENT_CONFIG = storedConfig;
+            USERSCRIPT_API_KEY = storedApiKey;
+            console.log('[TW Script] Configurações carregadas do armazenamento local.');
+            return true;
+        }
+        
+        // Se não, tenta migrar as chaves que foram injetadas na primeira instalação.
+        if (Object.keys(hardcodedConfig).length > 0 && hardcodedApiKey) {
+            GM_setValue("FIREBASE_CLIENT_CONFIG", hardcodedConfig);
+            GM_setValue("USERSCRIPT_API_KEY", hardcodedApiKey);
+            FIREBASE_CLIENT_CONFIG = hardcodedConfig;
+            USERSCRIPT_API_KEY = hardcodedApiKey;
+            console.log('[TW Script] Chaves migradas com sucesso para o armazenamento local!');
+            return true;
+        }
+
+        // Se chegou aqui, as chaves não foram encontradas em lugar nenhum.
+        alert("MULTCONTROL: Chaves de configuração não encontradas! Por favor, instale o script novamente a partir do seu dashboard.");
+        return false;
+    }
     // ============================================================================
     // == SEÇÃO DE FUNÇÕES ==
     // ============================================================================
@@ -315,6 +345,10 @@
     }
 
     // --- PONTO DE ENTRADA DO SCRIPT ---
+    if (setupConfig()) {
+        main();
+    }
+    async function main() {
     console.log("-- Script do Tribal Wars v1.0.0 ativado --");
 
     initializeFirebase();

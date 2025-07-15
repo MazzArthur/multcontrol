@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personalizar Script - MULTCONTROL</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -13,72 +14,151 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; }
-        .navbar { background-color: #2c3e50; width: 100%; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        /* Fonte local do tema medieval */
+        @font-face {
+            font-family: 'MedievalSharp';
+            src: url('MedievalSharp-Regular.ttf') format('truetype');
+        }
+
+        /* --- ESTILO "CASCA" MEDIEVAL --- */
+        html { font-size: clamp(14px, 1.5vw + 0.5rem, 16px); }
+        body {
+            margin: 0; padding: 0; font-family: 'MedievalSharp', cursive;
+            font-size: 1rem; color: #eee;
+            background: url('https://i.imgur.com/spPUGqP.png') repeat, #30221d;
+            background-size: cover; display: flex; flex-direction: column;
+            align-items: center; min-height: 100vh;
+        }
+        .navbar {
+            background-color: rgba(25, 20, 18, 0.5); backdrop-filter: blur(4px);
+            width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 20px; border-bottom: 1px solid rgba(207, 163, 68, 0.3);
+        }
         .navbar-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: flex-start; }
-        .navbar a { float: left; color: white; text-align: center; padding: 14px 20px; text-decoration: none; font-size: 17px; font-weight: bold; transition: background-color 0.3s; }
-        .navbar a:hover { background-color: #3498db; }
-        .navbar a.active { background-color: #2980b9; }
-        .main-container { padding: 20px; width: 100%; max-width: 1100px; box-sizing: border-box; }
+        .navbar a {
+            color: #fff8dc; text-align: center; padding: 14px 20px;
+            text-decoration: none; font-size: 1.1rem; font-weight: bold;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .navbar a:hover { background-color: rgba(207, 163, 68, 0.8); color: #111; }
+        .navbar a.active { background-color: #cfa344; color: #111; }
+        
+        /* --- ESTRUTURA E TÍTULOS PRINCIPAIS --- */
+        .main-container { padding: 20px; width: 100%; max-width: 1200px; box-sizing: border-box; }
+        h1, h2 {
+            font-family: 'MedievalSharp', cursive; /* Títulos com a fonte do tema */
+            color: #fff8dc;
+            border-bottom: 1px solid rgba(207, 163, 68, 0.5);
+            padding-bottom: 10px; margin-top: 0;
+        }
+
+        /* --- ESTILO UNIFICADO PARA PAINÉIS --- */
+        .panel {
+            background: rgba(43, 30, 25, 0.25); backdrop-filter: blur(2px);
+            border: 1px solid rgba(207, 163, 68, 0.3);
+            border-radius: 1rem; box-shadow: 0 0 1.5rem rgba(0, 0, 0, 0.4);
+            padding: 25px; margin-bottom: 20px;
+        }
         .grid-container { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
-        .panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
-        .profile-manager { grid-column: 1 / -1; margin-bottom: 20px; }
-        .profile-manager select { width: 100%; padding: 10px; font-size: 1.1em; }
-        .btn { border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: background-color 0.3s; }
-        .btn-import { background-color: #546e7a; color: white; margin-left:10px; }
-        .btn-info { background-color: #17a2b8; color: white; }
-        #building-controls-container { display: flex; flex-direction: column; gap: 12px; }
-        .building-control-row { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 8px; border-radius: 5px; border: 1px solid #e9ecef; }
-        .building-name { font-weight: 500; flex-basis: 50%; }
-        .building-inputs { display: flex; align-items: center; gap: 8px; }
-        .building-inputs input { width: 50px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
-        .btn-add { background-color: #3498db; color: white; }
-        #custom-order-list { min-height: 200px; max-height: 500px; overflow-y: auto; border: 1px dashed #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; }
-        /* Drag and Drop styles */
-        .order-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #e3f2fd;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 5px;
-            font-weight: 500;
-            cursor: grab; /* Indicates draggable */
-        }
-        .order-item.dragging {
-            opacity: 0.5;
-            border: 2px dashed #3498db;
-        }
-        .order-item.drag-over {
-            border-top: 2px solid #2980b9; /* Visual cue for drop target */
-        }
-        .delete-btn { background: #e57373; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 22px; text-align: center; }
-        .action-buttons { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
-        .btn-save { background-color: #28a745; color: white; }
-        .btn-clear { background-color: #e53935; color: white; }
+        .profile-manager { grid-column: 1 / -1; }
         #script-generation-panel { grid-column: 1 / -1; margin-top: 20px; }
-        #status-message { margin-top: 15px; color: #218838; font-weight: bold; text-align: center; height: 20px; }
-        #script-list-container { display: flex; flex-direction: column; gap: 12px; }
-        .script-list-item { display: flex; align-items: center; justify-content: space-between; background-color: #f8f9fa; padding: 10px 15px; border-radius: 5px; border: 1px solid #e9ecef; }
-        .script-list-item strong { font-size: 1.1em; color: #333; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .modal-content h2 { margin-top: 0; }
-        .modal-content textarea { width: 100%; height: 200px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 0.9em; margin-top: 10px; background-color: #f4f4f4; color: #333; padding: 10px; border-radius: 5px; }
+        
+        /* --- ESTILO DOS ELEMENTOS INTERNOS DOS PAINÉIS --- */
+        p, small, strong, span, div, label { font-family: 'Roboto', sans-serif; } /* Texto comum com fonte legível */
+
+        select, input[type="number"], input[type="text"] {
+            width: 100%; padding: 10px; font-size: 1em;
+            background-color: rgba(255, 255, 255, 0.8); color: #333;
+            border: 1px solid #cfa344; border-radius: 5px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .btn {
+            border: 2px solid #cfa344; border-radius: 5px; padding: 8px 15px;
+            cursor: pointer; font-size: 0.9em; font-weight: bold;
+            transition: all 0.3s; background: rgba(139, 90, 43, 0.7);
+            color: #fff8dc; font-family: 'MedievalSharp', cursive;
+        }
+        .btn:hover { background-color: rgba(160, 82, 45, 0.8); border-color: #f3d999; }
+        .btn-import { background-color: rgba(84, 110, 122, 0.7); border-color: #546e7a; }
+        .btn-import:hover { background-color: rgba(84, 110, 122, 0.9); }
+        .btn-info { background-color: rgba(23, 162, 184, 0.7); border-color: #17a2b8; }
+        .btn-info:hover { background-color: rgba(23, 162, 184, 0.9); }
+        .btn-add { background-color: rgba(52, 152, 219, 0.7); border-color: #3498db; }
+        .btn-add:hover { background-color: rgba(52, 152, 219, 0.9); }
+        .btn-save { background-color: rgba(40, 167, 69, 0.7); border-color: #28a745; }
+        .btn-save:hover { background-color: rgba(40, 167, 69, 0.9); }
+        .btn-clear, .delete-btn { background-color: rgba(229, 57, 53, 0.7); border-color: #e53935; }
+        .btn-clear:hover, .delete-btn:hover { background-color: rgba(229, 57, 53, 0.9); }
+        .delete-btn { border-radius: 50%; width: 24px; height: 24px; padding: 0; line-height: 24px; font-size: 1.2em; }
+
+        .building-controls-container { display: flex; flex-direction: column; gap: 12px; }
+        .building-control-row {
+            display: flex; align-items: center; justify-content: space-between;
+            background-color: rgba(0,0,0,0.2);
+            padding: 8px; border-radius: 5px; border: 1px solid rgba(207, 163, 68, 0.2);
+        }
+        .building-name { font-weight: 500; flex-basis: 50%; color: #eee; }
+
+        #custom-order-list {
+            min-height: 200px; max-height: 500px; overflow-y: auto;
+            border: 1px dashed rgba(207, 163, 68, 0.4); border-radius: 5px;
+            padding: 10px; background-color: rgba(0,0,0,0.2);
+        }
+        .order-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background-color: rgba(43, 30, 25, 0.4);
+            border: 1px solid rgba(207, 163, 68, 0.3);
+            padding: 10px; border-radius: 4px; margin-bottom: 5px;
+            font-weight: 500; cursor: grab; color: #fff8dc;
+        }
+        .order-item.dragging { opacity: 0.5; border: 2px dashed #cfa344; }
+        .order-item.drag-over { border-top: 2px solid #f3d999; }
+        
+        #status-message { color: #b9f6ca; font-weight: bold; text-align: center; height: 20px; font-family: 'Roboto', sans-serif; }
+        #status-message.error { color: #ff8a80; }
+
+        .script-list-item {
+            display: flex; align-items: center; justify-content: space-between;
+            background-color: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 5px;
+            border: 1px solid rgba(207, 163, 68, 0.2);
+        }
+        .script-list-item strong { font-size: 1.1em; color: #eee; }
+
+        /* --- Estilos do Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-content {
+            background: rgba(43, 30, 25, 0.8); border: 1px solid #cfa344;
+            padding: 30px; border-radius: 8px; width: 90%;
+            max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            color: #eee;
+        }
+        .modal-content textarea {
+            width: 100%; height: 200px; box-sizing: border-box; font-family: 'Consolas', monospace;
+            font-size: 0.9em; margin-top: 10px; background-color: #1a1a1a;
+            color: #eee; padding: 10px; border-radius: 5px; border: 1px solid #555;
+        }
         .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+
+        /* --- Responsividade --- */
+        @media(max-width: 800px) {
+            .grid-container { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
 <nav class="navbar">
-        <div class="navbar-container">
-            <a href="/dashboard.html">Dashboard</a>
-            <a href="/personalizar" class="active">Perfis de Construção</a>
-            <a href="/atribuicoes">Atribuir Perfis</a>
-        </div>
-    </nav>
+    <div class="navbar-container">
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/personalizar" class="active">Perfis de Construção</a>
+        <a href="/atribuicoes">Atribuir Perfis</a>
+    </div>
+</nav>
 
 <div class="main-container">
     <h1>Gerenciador de Estratégias de Construção</h1>
@@ -150,7 +230,7 @@
         let allProfiles = [];
         let currentProfile = null;
         let currentBuildOrder = [];
-        let draggedItem = null; // To keep track of the item being dragged
+        let draggedItem = null;
 
         const profileSelect = document.getElementById('profile-select');
         const controlsContainer = document.getElementById('building-controls-container');
@@ -250,7 +330,7 @@
         function renderScriptList() {
             scriptListContainer.innerHTML = '';
             if (allProfiles.length === 0) {
-                scriptListContainer.innerHTML = '<p>Nenhum perfil salvo encontrado.</p>';
+                scriptListContainer.innerHTML = '<p style="color: #ccc;">Nenhum perfil salvo encontrado.</p>';
                 return;
             }
             allProfiles.forEach(profile => {
@@ -279,22 +359,22 @@
 
         const showStatus = (message, isError = false) => {
             statusMsg.textContent = message;
-            statusMsg.style.color = isError ? '#dc3545' : '#218838';
+            statusMsg.className = isError ? 'error' : '';
             setTimeout(() => { statusMsg.textContent = '' }, 4000);
         };
 
         const renderCustomOrder = () => {
             customList.innerHTML = '';
             if (currentBuildOrder.length === 0) {
-                customList.innerHTML = '<p>Ordem de construção vazia.</p>';
+                customList.innerHTML = '<p style="color: #ccc;">Ordem de construção vazia.</p>';
                 return;
             }
             currentBuildOrder.forEach((item, index) => {
                 const info = BUILDING_INFO[item.building] || { name: item.building, icon: '❓' };
                 const el = document.createElement('div');
                 el.className = 'order-item';
-                el.setAttribute('draggable', 'true'); // Make items draggable
-                el.dataset.index = index; // Store original index
+                el.setAttribute('draggable', 'true');
+                el.dataset.index = index;
                 el.innerHTML = `<span>${index + 1}. ${info.icon} <strong>${info.name}</strong> - Nível ${item.level}</span><button class="delete-btn" data-index="${index}">×</button>`;
                 customList.appendChild(el);
             });
@@ -362,94 +442,68 @@
         
         customList.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-btn')) {
-                // When an item is deleted, update the dataset.index for remaining items
                 const indexToDelete = parseInt(e.target.dataset.index, 10);
                 currentBuildOrder.splice(indexToDelete, 1);
-                renderCustomOrder(); // Re-render to update indices and display
+                renderCustomOrder();
             }
         });
 
-        // --- Drag and Drop Event Listeners ---
         customList.addEventListener('dragstart', (e) => {
             if (e.target.classList.contains('order-item')) {
                 draggedItem = e.target;
-                e.target.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', e.target.dataset.index); // Store the original index
+                setTimeout(() => e.target.classList.add('dragging'), 0);
             }
+        });
+        
+        customList.addEventListener('dragend', (e) => {
+            e.target.classList.remove('dragging');
         });
 
         customList.addEventListener('dragover', (e) => {
-            e.preventDefault(); // Necessary to allow dropping
-            const targetItem = e.target.closest('.order-item');
-            if (targetItem && targetItem !== draggedItem) {
-                const rect = targetItem.getBoundingClientRect();
-                const offsetY = e.clientY - rect.top;
-                
-                // Determine if we are dragging over the top half or bottom half of the item
-                if (offsetY < rect.height / 2) {
-                    targetItem.classList.remove('drag-over-bottom');
-                    targetItem.classList.add('drag-over'); // Top border
-                } else {
-                    targetItem.classList.remove('drag-over');
-                    targetItem.classList.add('drag-over-bottom'); // Bottom border
-                }
-            }
-        });
-
-        customList.addEventListener('dragleave', (e) => {
-            const targetItem = e.target.closest('.order-item');
-            if (targetItem) {
-                targetItem.classList.remove('drag-over', 'drag-over-bottom');
+            e.preventDefault();
+            const afterElement = getDragAfterElement(customList, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (afterElement == null) {
+                customList.appendChild(draggable);
+            } else {
+                customList.insertBefore(draggable, afterElement);
             }
         });
 
         customList.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const dropTarget = e.target.closest('.order-item');
-            if (draggedItem && dropTarget && draggedItem !== dropTarget) {
-                const originalIndex = parseInt(draggedItem.dataset.index, 10);
-                let newIndex = parseInt(dropTarget.dataset.index, 10);
-
-                const rect = dropTarget.getBoundingClientRect();
-                const offsetY = e.clientY - rect.top;
-
-                // Adjust newIndex based on whether dropped on top or bottom half
-                if (offsetY > rect.height / 2) {
-                    newIndex++; // Insert after the target item
-                }
-
-                // If moving down, account for the item being removed
-                if (originalIndex < newIndex) {
-                    newIndex--;
-                }
-                
-                const [movedItem] = currentBuildOrder.splice(originalIndex, 1);
-                currentBuildOrder.splice(newIndex, 0, movedItem);
-                
-                renderCustomOrder(); // Re-render to reflect the new order
-            }
-            // Clean up drag-over classes from all items
-            document.querySelectorAll('.order-item').forEach(item => {
-                item.classList.remove('drag-over', 'drag-over-bottom');
+            const draggable = document.querySelector('.dragging');
+            const newOrder = [];
+            customList.querySelectorAll('.order-item').forEach(item => {
+                const originalIndex = parseInt(item.dataset.index, 10);
+                newOrder.push(currentBuildOrder[originalIndex]);
             });
-            draggedItem.classList.remove('dragging');
-            draggedItem = null;
-        });
-
-        customList.addEventListener('dragend', (e) => {
-            // This event fires on the draggable target after the drag operation has ended
-            if (draggedItem) {
-                draggedItem.classList.remove('dragging');
-                draggedItem = null;
-            }
-            // Ensure all drag-over classes are removed if drag ends outside a valid drop target
-            document.querySelectorAll('.order-item').forEach(item => {
-                item.classList.remove('drag-over', 'drag-over-bottom');
+            currentBuildOrder = newOrder.map((item, index) => { // Remap original items to new order
+                const originalItem = allProfiles.flatMap(p => p.order).find(oi => oi.building === item.building && oi.level === item.level) || item;
+                return { building: originalItem.building, level: originalItem.level };
             });
-        });
-        // --- End Drag and Drop Event Listeners ---
+            
+            const originalBuildOrder = [...currentBuildOrder];
+            currentBuildOrder.length = 0;
+            Array.from(customList.children).forEach(child => {
+                 const originalIndex = parseInt(child.dataset.index);
+                 currentBuildOrder.push(originalBuildOrder[originalIndex]);
+            });
 
+            renderCustomOrder(); // Re-render to update visual order and indices
+        });
+        
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.order-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
 
         scriptListContainer.addEventListener('click', async (e) => {
             if (e.target.classList.contains('copy-script-btn')) {
@@ -472,7 +526,7 @@
             modalActionBtn.textContent = 'Copiar Código';
             modalActionBtn.onclick = () => {
                 modalTextarea.select();
-                document.execCommand('copy');
+                navigator.clipboard.writeText(modalTextarea.value);
                 showStatus('Código copiado para a área de transferência!');
             };
             modal.style.display = 'flex';

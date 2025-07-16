@@ -151,7 +151,8 @@ app.get('/ping', (req, res) => {
         timestamp: new Date() 
     });
 });
-app.get('/admin', requireAuth, requireAdmin, (req, res) => {
+app.get('/admin', (req, res) => {
+    // A verificação de segurança agora é feita pelo JavaScript dentro da página
     res.render('admin', { firebaseConfig: getFirebaseClientConfig() });
 });
 

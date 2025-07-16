@@ -183,7 +183,7 @@ app.get('/api/user/settings', requireAuth, async (req, res) => {
     }
 });
 // --- API DE CONFIGURAÇÃO DE ALERTAS ---
-app.post('/api/user/settings', requireAuth, async (req, res) => {
+app.post('/api/user/settings', requireAuth, requirePremium, async (req, res) => {
     const { whatsappNumber, discordWebhookUrl } = req.body;
     try {
         // Salva ambos os campos. Se um for vazio, ele salva uma string vazia.

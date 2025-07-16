@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Admin - MULTCONTROL</title>
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #f4f7f6; }
+        .main-container { max-width: 1200px; margin: 20px auto; padding: 20px; }
+        h1 { color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #495057; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .tier-premium { color: #28a745; font-weight: bold; }
+        .tier-free { color: #6c757d; }
+        .grant-controls input { width: 60px; padding: 5px; margin-right: 10px; }
+        .grant-controls button { padding: 5px 10px; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>Painel de Administração</h1>
+        <h2>Gerenciamento de Usuários</h2>
+        <div id="loading">Carregando usuários...</div>
+        <table id="users-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Expira em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="users-tbody">
+                </tbody>
+        </table>
+    </div>
+
+<script>
+    const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    async function apiRequest(endpoint, method = 'GET', body = null) {
+        if (!auth.currentUser) throw new Error('Admin não autenticado.');
+        const idToken = await auth.currentUser.getIdToken();
+        const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
+        if (body) options.body = JSON.stringify(body);
+        const response = await fetch(endpoint, options);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Falha na requisição: ${response.statusText}`);
+        }
+        return response.json();
+    }
+
+    async function loadUsers() {
+        const tbody = document.getElementById('users-tbody');
+        const loading = document.getElementById('loading');
+        const table = document.getElementById('users-table');
+        tbody.innerHTML = '';
+        loading.style.display = 'block';
+        table.style.display = 'none';
+
+        try {
+            const users = await apiRequest('/api/admin/users');
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                const expirationDate = user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt._seconds * 1000).toLocaleDateString('pt-BR') : 'N/A';
+                
+                tr.innerHTML = `
+                    <td>${user.email}</td>
+                    <td><span class="tier-${user.subscriptionTier}">${user.subscriptionTier.toUpperCase()}</span></td>
+                    <td>${expirationDate}</td>
+                    <td class="grant-controls">
+                        <input type="number" id="days-${user.uid}" value="30" min="1">
+                        <button data-uid="${user.uid}">Conceder Premium</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            loading.style.display = 'none';
+            table.style.display = 'table';
+        } catch (error) {
+            loading.innerHTML = `Erro ao carregar usuários: ${error.message}`;
+        }
+    }
+
+    document.getElementById('users-table').addEventListener('click', async (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            const button = e.target;
+            const userId = button.dataset.uid;
+            const days = document.getElementById(`days-${userId}`).value;
+            
+            if (!days || days < 1) {
+                alert('Por favor, insira um número válido de dias.');
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = 'Aguarde...';
+
+            try {
+                const result = await apiRequest('/api/admin/grant-premium', 'POST', { userId, days });
+                alert(result.message);
+                loadUsers(); // Recarrega a lista
+            } catch (error) {
+                alert(`Erro: ${error.message}`);
+                button.disabled = false;
+                button.textContent = 'Conceder Premium';
+            }
+        }
+    });
+
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            loadUsers();
+        } else {
+            // Se o admin não estiver logado, pode redirecionar para a página de login
+            window.location.href = '/'; 
+        }
+    });
+</script>
+</body>
+</html>

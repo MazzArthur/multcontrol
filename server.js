@@ -65,6 +65,31 @@ const requireAuth = async (req, res, next) => {
         return res.status(403).json({ error: 'Falha na autenticação.' });
     }
 };
+const requireAdmin = (req, res, next) => {
+    // Verifica se o UID do usuário logado é o mesmo do ADMIN_UID definido no seu .env
+    if (req.user.uid !== process.env.ADMIN_UID) {
+        return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
+    }
+    next();
+};
+
+const requirePremium = async (req, res, next) => {
+    try {
+        const userDoc = await db.collection('users').doc(req.user.uid).get();
+        // Verifica se o usuário tem a tier "premium"
+        if (userDoc.exists && userDoc.data().subscriptionTier === 'premium') {
+            const expiration = userDoc.data().subscriptionExpiresAt;
+            // E se a assinatura não tem data de expiração ou ainda não expirou
+            if (!expiration || expiration.toDate() > new Date()) {
+                return next(); 
+            }
+        }
+        // Se qualquer verificação falhar, nega o acesso.
+        return res.status(403).json({ error: 'Recurso exclusivo para assinantes premium.' });
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro ao verificar a assinatura.' });
+    }
+};
 function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {
     try {
         const filePath = path.resolve(__dirname, 'userscripts_content', fileName);
@@ -126,6 +151,9 @@ app.get('/ping', (req, res) => {
         timestamp: new Date() 
     });
 });
+app.get('/admin', requireAuth, requireAdmin, (req, res) => {
+    res.render('admin', { firebaseConfig: getFirebaseClientConfig() });
+});
 
 // ===========================================
 // ** ROTAS DE API **
@@ -143,7 +171,7 @@ app.get('/api/user/settings', requireAuth, async (req, res) => {
     }
 });
 // --- API DE CONFIGURAÇÃO DE ALERTAS ---
-app.post('/api/user/settings', requireAuth, async (req, res) => {
+app.post('/api/user/settings', requireAuth, requirePremium, async (req, res) => {
     const { whatsappNumber, discordWebhookUrl } = req.body;
     try {
         // Salva ambos os campos. Se um for vazio, ele salva uma string vazia.
@@ -256,7 +284,54 @@ app.delete('/api/build-orders/:id', requireAuth, async (req, res) => {
         res.status(200).json({ message: 'Perfil deletado.' });
     } catch (error) { res.status(500).json({ error: 'Erro ao deletar ordem.' }); }
 });
+// --- ROTAS DE ADMINISTRAÇÃO ---
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const listUsersResult = await admin.auth().listUsers(1000);
+        const users = await Promise.all(
+            listUsersResult.users.map(async (userRecord) => {
+                const userDoc = await db.collection('users').doc(userRecord.uid).get();
+                const subData = userDoc.exists ? userDoc.data() : {};
+                return {
+                    uid: userRecord.uid,
+                    email: userRecord.email,
+                    subscriptionTier: subData.subscriptionTier || 'free',
+                    subscriptionExpiresAt: subData.subscriptionExpiresAt || null
+                };
+            })
+        );
+        res.status(200).json(users);
+    } catch (error) {
+        console.error("Erro ao listar usuários:", error);
+        res.status(500).json({ error: "Erro ao listar usuários." });
+    }
+});
 
+app.post('/api/admin/grant-premium', requireAuth, requireAdmin, async (req, res) => {
+    const { userId, days } = req.body;
+    if (!userId || !days) return res.status(400).json({ error: 'userId e days são obrigatórios.' });
+    try {
+        const userDocRef = db.collection('users').doc(userId);
+        const userDoc = await userDocRef.get();
+        
+        let currentExpiration = new Date();
+        if (userDoc.exists && userDoc.data().subscriptionTier === 'premium' && userDoc.data().subscriptionExpiresAt?.toDate() > new Date()) {
+            currentExpiration = userDoc.data().subscriptionExpiresAt.toDate();
+        }
+
+        const newExpirationDate = new Date(currentExpiration.getTime() + (parseInt(days) * 24 * 60 * 60 * 1000));
+
+        await userDocRef.set({
+            subscriptionTier: 'premium',
+            subscriptionExpiresAt: admin.firestore.Timestamp.fromDate(newExpirationDate)
+        }, { merge: true });
+
+        res.status(200).json({ message: `Premium concedido para ${userId} por ${days} dias.` });
+    } catch (error) {
+        console.error("Erro ao conceder premium:", error);
+        res.status(500).json({ error: "Erro ao conceder premium." });
+    }
+});
 // --- API DE GERAÇÃO DE SCRIPTS ---
 app.get('/api/get-raw-script/:scriptName', requireAuth, (req, res) => {
     const scriptName = req.params.scriptName;

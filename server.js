@@ -76,18 +76,32 @@ const requireAdmin = (req, res, next) => {
 const requirePremium = async (req, res, next) => {
     try {
         const userDoc = await db.collection('users').doc(req.user.uid).get();
-        // Verifica se o usuário tem a tier "premium"
-        if (userDoc.exists && userDoc.data().subscriptionTier === 'premium') {
-            const expiration = userDoc.data().subscriptionExpiresAt;
-            // E se a assinatura não tem data de expiração ou ainda não expirou
-            if (!expiration || expiration.toDate() > new Date()) {
-                return next(); 
+
+        if (!userDoc.exists) {
+            return res.status(403).json({ error: 'Usuário não encontrado.' });
+        }
+
+        const userData = userDoc.data();
+
+        if (userData.subscriptionTier !== 'premium') {
+            return res.status(403).json({ error: 'Acesso negado. Requer assinatura premium.' });
+        }
+
+        // Se for premium, verifica a data de expiração
+        if (userData.subscriptionExpiresAt) {
+            const expirationDate = userData.subscriptionExpiresAt.toDate();
+            if (expirationDate <= new Date()) {
+                // Se a data já passou, nega o acesso
+                return res.status(403).json({ error: 'Sua assinatura premium expirou.' });
             }
         }
-        // Se qualquer verificação falhar, nega o acesso.
-        return res.status(403).json({ error: 'Recurso exclusivo para assinantes premium.' });
+        
+        // Se chegou até aqui, o usuário é premium e a assinatura é válida. Permite o acesso.
+        next();
+
     } catch (error) {
-        return res.status(500).json({ error: 'Erro ao verificar a assinatura.' });
+        console.error("Erro ao verificar assinatura premium:", error);
+        return res.status(500).json({ error: 'Erro interno ao verificar a assinatura.' });
     }
 };
 function readScriptFileAsBase64(fileName, userscriptApiKeyToInject) {

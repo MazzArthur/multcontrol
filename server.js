@@ -75,48 +75,29 @@ const requireAdmin = (req, res, next) => {
 
 const requirePremium = async (req, res, next) => {
     try {
-        const uid = req.user.uid;
-        console.log(`[DEBUG] Verificando premium para UID: ${uid}`);
-
-        const userDoc = await db.collection('users').doc(uid).get();
+        const userDoc = await db.collection('users').doc(req.user.uid).get();
 
         if (!userDoc.exists) {
-            console.log(`[DEBUG] Usuário ${uid} não encontrado na coleção 'users'.`);
-            return res.status(403).json({ error: 'Usuário não encontrado.' });
+            return res.status(403).json({ error: 'Usuário não encontrado no banco de dados.' });
         }
 
         const userData = userDoc.data();
-        console.log(`[DEBUG] Dados do usuário encontrados:`, userData);
 
-        const tier = userData.subscriptionTier;
-        console.log(`[DEBUG] Tier da assinatura: '${tier}'`);
-
-        if (tier !== 'premium') {
-            console.log(`[DEBUG] Acesso negado. Tier não é 'premium'.`);
+        if (userData.subscriptionTier !== 'premium') {
             return res.status(403).json({ error: 'Acesso negado. Requer assinatura premium.' });
         }
 
-        // Se for premium, verifica a data de expiração
-        const expirationTimestamp = userData.subscriptionExpiresAt;
-        if (expirationTimestamp) {
-            const expirationDate = expirationTimestamp.toDate();
-            const now = new Date();
-            console.log(`[DEBUG] Data de expiração: ${expirationDate.toISOString()}`);
-            console.log(`[DEBUG] Data atual: ${now.toISOString()}`);
-
-            if (expirationDate <= now) {
-                console.log(`[DEBUG] Acesso negado. Assinatura expirou.`);
+        if (userData.subscriptionExpiresAt) {
+            const expirationDate = userData.subscriptionExpiresAt.toDate();
+            if (expirationDate <= new Date()) {
                 return res.status(403).json({ error: 'Sua assinatura premium expirou.' });
             }
-        } else {
-             console.log(`[DEBUG] Nenhuma data de expiração encontrada, acesso concedido.`);
         }
         
-        console.log(`[DEBUG] Acesso PREMIUM concedido para ${uid}.`);
-        next();
+        next(); // Se chegou aqui, o usuário é premium e a assinatura é válida.
 
     } catch (error) {
-        console.error("[DEBUG] Erro catastrófico ao verificar assinatura premium:", error);
+        console.error("Erro ao verificar assinatura premium:", error);
         return res.status(500).json({ error: 'Erro interno ao verificar a assinatura.' });
     }
 };

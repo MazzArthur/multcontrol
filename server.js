@@ -77,24 +77,16 @@ const requirePremium = async (req, res, next) => {
     try {
         const userDoc = await db.collection('users').doc(req.user.uid).get();
 
-        if (!userDoc.exists) {
-            return res.status(403).json({ error: 'Usuário não encontrado no banco de dados.' });
-        }
-
-        const userData = userDoc.data();
-
-        if (userData.subscriptionTier !== 'premium') {
-            return res.status(403).json({ error: 'Acesso negado. Requer assinatura premium.' });
-        }
-
-        if (userData.subscriptionExpiresAt) {
-            const expirationDate = userData.subscriptionExpiresAt.toDate();
-            if (expirationDate <= new Date()) {
-                return res.status(403).json({ error: 'Sua assinatura premium expirou.' });
+        // Se o documento do usuário existir E ele for premium E a assinatura for válida
+        if (userDoc.exists && userDoc.data().subscriptionTier === 'premium') {
+            const expiration = userDoc.data().subscriptionExpiresAt;
+            if (!expiration || expiration.toDate() > new Date()) {
+                return next(); // Permite o acesso
             }
         }
         
-        next(); // Se chegou aqui, o usuário é premium e a assinatura é válida.
+        // Para TODOS os outros casos (não é premium, assinatura expirou ou o documento nem existe), nega o acesso.
+        return res.status(403).json({ error: 'Recurso exclusivo para assinantes premium.' });
 
     } catch (error) {
         console.error("Erro ao verificar assinatura premium:", error);

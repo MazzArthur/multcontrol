@@ -3,18 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>Painel de Admin - MULTCONTROL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- SCRIPTS DO FIREBASE QUE ESTAVAM FALTANDO -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
     <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #f4f7f6; }
-        .main-container { max-width: 1200px; margin: 20px auto; padding: 20px; }
-        h1 { color: #2c3e50; }
-        table { width: 100%; border-collapse: collapse; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        th, td { padding: 12px 15px; border: 1px solid #ddd; text-align: left; }
-        th { background-color: #495057; color: white; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .main-container { max-width: 1200px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px 15px; border: 1px solid #ddd; text-align: left; font-size: 0.9em; }
+        th { background-color: #34495e; color: white; }
         tr:nth-child(even) { background-color: #f2f2f2; }
         .tier-premium { color: #28a745; font-weight: bold; }
         .tier-free { color: #6c757d; }
         .grant-controls input { width: 60px; padding: 5px; margin-right: 10px; }
-        .grant-controls button { padding: 5px 10px; font-size: 0.8em; }
+        .grant-controls button { padding: 5px 10px; font-size: 0.8em; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -26,20 +33,24 @@
             <thead>
                 <tr>
                     <th>Email</th>
+                    <th>UID</th>
                     <th>Status</th>
                     <th>Expira em</th>
                     <th>Ações</th>
                 </tr>
             </thead>
-            <tbody id="users-tbody">
-                </tbody>
+            <tbody id="users-tbody"></tbody>
         </table>
     </div>
 
 <script>
-    const firebaseConfig = <%- JSON.stringify(firebaseConfig) %>;
+    // Correção: Envolve a injeção do EJS em aspas para garantir que seja uma string válida, depois faz o parse.
+    const firebaseConfig = JSON.parse('<%- JSON.stringify(firebaseConfig) %>');
+    
+    // Agora o 'firebase' estará definido por causa dos scripts adicionados no <head>
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.firestore();
 
     async function apiRequest(endpoint, method = 'GET', body = null) {
         if (!auth.currentUser) throw new Error('Admin não autenticado.');
@@ -47,11 +58,11 @@
         const options = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` } };
         if (body) options.body = JSON.stringify(body);
         const response = await fetch(endpoint, options);
+        const responseData = await response.json();
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Falha na requisição: ${response.statusText}`);
+            throw new Error(responseData.error || `Falha na requisição: ${response.statusText}`);
         }
-        return response.json();
+        return responseData;
     }
 
     async function loadUsers() {
@@ -64,12 +75,15 @@
 
         try {
             const users = await apiRequest('/api/admin/users');
+            users.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+            
             users.forEach(user => {
                 const tr = document.createElement('tr');
                 const expirationDate = user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt._seconds * 1000).toLocaleDateString('pt-BR') : 'N/A';
                 
                 tr.innerHTML = `
-                    <td>${user.email}</td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td>${user.uid}</td>
                     <td><span class="tier-${user.subscriptionTier}">${user.subscriptionTier.toUpperCase()}</span></td>
                     <td>${expirationDate}</td>
                     <td class="grant-controls">
@@ -82,7 +96,7 @@
             loading.style.display = 'none';
             table.style.display = 'table';
         } catch (error) {
-            loading.innerHTML = `Erro ao carregar usuários: ${error.message}`;
+            loading.innerHTML = `<h2>Acesso Negado</h2><p>Erro ao carregar usuários: ${error.message}</p><p>Verifique se você está logado com sua conta de administrador e se o seu UID está configurado corretamente nas variáveis de ambiente do servidor.</p>`;
         }
     }
 
@@ -103,7 +117,7 @@
             try {
                 const result = await apiRequest('/api/admin/grant-premium', 'POST', { userId, days });
                 alert(result.message);
-                loadUsers(); // Recarrega a lista
+                loadUsers();
             } catch (error) {
                 alert(`Erro: ${error.message}`);
                 button.disabled = false;
@@ -116,8 +130,7 @@
         if (user) {
             loadUsers();
         } else {
-            // Se o admin não estiver logado, pode redirecionar para a página de login
-            window.location.href = '/'; 
+            document.body.innerHTML = '<h1>Acesso Negado</h1><p>Você precisa estar logado para acessar o painel de admin. <a href="/">Fazer login</a></p>';
         }
     });
 </script>

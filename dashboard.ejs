@@ -357,7 +357,24 @@
         const captchaAlertsList = document.getElementById('captchaAlertsList');
         const attackAlertsList = document.getElementById('attackAlertsList');
         const backendUrl = 'https://multcontrol.onrender.com';
+        // FUNÇÃO "CARTEIRO" QUE ESTAVA FALTANDO
+        async function apiRequest(endpoint, method = 'GET', body = null) {
+            if (!auth.currentUser) throw new Error('Usuário não autenticado.');
+            const idToken = await auth.currentUser.getIdToken(true);
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
+            };
+            if (body) options.body = JSON.stringify(body);
+            
+            const response = await fetch(`/api/${endpoint}`, options);
+            const responseData = await response.json();
 
+            if (!response.ok) {
+                throw new Error(responseData.error || `Falha na requisição: ${response.statusText}`);
+            }
+            return responseData;
+        }
          // =================================================================
         // == INÍCIO DA CORREÇÃO: MÁSCARA INTEGRADA AO SEU CÓDIGO ==
         // =================================================================

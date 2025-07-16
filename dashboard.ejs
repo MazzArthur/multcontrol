@@ -357,6 +357,69 @@
         const captchaAlertsList = document.getElementById('captchaAlertsList');
         const attackAlertsList = document.getElementById('attackAlertsList');
         const backendUrl = 'https://multcontrol.onrender.com';
+
+         // =================================================================
+        // == INÍCIO DA CORREÇÃO: MÁSCARA INTEGRADA AO SEU CÓDIGO ==
+        // =================================================================
+
+        // 1. APLICA A MÁSCARA NO INPUT DE WHATSAPP
+        if (whatsappInput) {
+            whatsappInput.setAttribute('maxlength', '18'); // Limita o tamanho do campo
+
+            whatsappInput.addEventListener('input', () => {
+                // Remove tudo que não for dígito
+                let digitos = whatsappInput.value.replace(/\D/g, '');
+
+                // Aplica a máscara que você queria: +55 (XX) XXXXXXXX
+                let valorMascarado = '';
+                if (digitos.length > 0) {
+                    valorMascarado = `+${digitos.substring(0, 2)}`;
+                }
+                if (digitos.length > 2) {
+                    valorMascarado += ` (${digitos.substring(2, 4)}`;
+                }
+                if (digitos.length > 4) {
+                    // Pega os próximos 8 ou 9 dígitos para o número
+                    const numeroPrincipal = digitos.substring(4, 13);
+                    valorMascarado += `) ${numeroPrincipal}`;
+                }
+                
+                whatsappInput.value = valorMascarado;
+            });
+        }
+
+        // --- Lógica do botão de salvar (seu código, com uma pequena correção) ---
+        saveSettingsBtn.addEventListener('click', async () => {
+            // 2. CORREÇÃO CRÍTICA: Pega apenas os números do campo, ignorando a máscara
+            const numeroPuro = whatsappInput.value.replace(/\D/g, '');
+            const webhookUrl = discordInput.value.trim();
+        
+            // A validação agora funciona corretamente com o número puro
+            if (numeroPuro && !/^\d{12,13}$/.test(numeroPuro)) {
+                alert('Número de WhatsApp inválido. Use o formato 55DDD9XXXXXXXX ou deixe em branco.');
+                return;
+            }
+            if (webhookUrl && webhookUrl.length > 0 && !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+                alert('URL do Webhook do Discord parece inválida. Verifique a URL copiada.');
+                return;
+            }
+        
+            saveSettingsBtn.disabled = true;
+            saveSettingsBtn.textContent = 'Salvando...';
+            try {
+                // Envia para a API o número PURO, sem máscara
+                await apiRequest('user/settings', 'POST', { 
+                    whatsappNumber: numeroPuro, 
+                    discordWebhookUrl: webhookUrl
+                });
+                alert('Configurações salvas com sucesso!');
+            } catch (error) {
+                alert('Erro ao salvar as configurações. Tente novamente.');
+            } finally {
+                saveSettingsBtn.disabled = false;
+                saveSettingsBtn.textContent = 'Salvar Configurações';
+            }
+        });
         
         document.querySelectorAll('.copy-script-button').forEach(button => {
             button.addEventListener('click', (event) => {
@@ -399,36 +462,6 @@
                 }
         
                 loadUserSettings();
-        
-                saveSettingsBtn.addEventListener('click', async () => {
-                    const number = whatsappInput.value.trim();
-                    const webhookUrl = discordInput.value.trim();
-            
-                    if (number && !/^\d{12,13}$/.test(number)) {
-                        alert('Número de WhatsApp inválido. Use o formato 55DDD9XXXXXXXX ou deixe em branco.');
-                        return;
-                    }
-                    if (webhookUrl && webhookUrl.length > 0 && !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
-                        alert('URL do Webhook do Discord parece inválida. Verifique a URL copiada.');
-                        return;
-                    }
-            
-                    saveSettingsBtn.disabled = true;
-                    saveSettingsBtn.textContent = 'Salvando...';
-                    try {
-                        await apiRequest('user/settings', 'POST', { 
-                            whatsappNumber: number,
-                            discordWebhookUrl: webhookUrl
-                        });
-                        alert('Configurações salvas com sucesso!');
-                    } catch (error) {
-                        alert('Erro ao salvar as configurações. Tente novamente.');
-                    } finally {
-                        saveSettingsBtn.disabled = false;
-                        saveSettingsBtn.textContent = 'Salvar Configurações';
-                    }
-                });
-
                 try {
                     const idToken = await user.getIdToken();
                     const response = await fetch(`${backendUrl}/get_userscripts_with_token`, {
@@ -533,58 +566,6 @@
             }
         });
     }
-    // Validação e Mascara Numero Whatsapp
-    const whatsappInputJs = document.getElementById('whatsapp-input-js');
-
-        // Adiciona um listener para o evento 'input'
-        whatsappInputJs.addEventListener('input', () => {
-            // Remove tudo que não for dígito
-            let digitos = whatsappInputJs.value.replace(/\D/g, '');
-            
-            // Garante que o 55 sempre esteja no início se houver mais de 2 dígitos
-            if (digitos.length > 2 && !digitos.startsWith('55')) {
-                // Se começou com DDD, por exemplo, adiciona o 55
-                if (digitos.length <= 11) {
-                   digitos = '55' + digitos;
-                }
-            } else if (digitos.length <= 2 && digitos !== '55') {
-                 // força o início
-                 digitos = '55' + digitos.substring(2);
-            }
-
-
-            // Aplica a máscara baseada na quantidade de dígitos
-            let valorMascarado = '';
-            if (digitos.length > 0) {
-                valorMascarado = `+${digitos.substring(0, 2)}`;
-            }
-            if (digitos.length > 2) {
-                valorMascarado += ` (${digitos.substring(2, 4)}`;
-            }
-            if (digitos.length > 4) {
-                // Pega o restante do número (sem o nono dígito)
-                const numeroSemDDD = digitos.substring(4, 12);
-                valorMascarado += `) ${numeroSemDDD}`;
-            }
-            
-            whatsappInputJs.value = valorMascarado;
-        });
-
-        // Lógica de Validação
-        const validarBtnJs = document.getElementById('validar-btn-js');
-        const resultadoJsDiv = document.getElementById('resultado-js');
-
-        validarBtnJs.addEventListener('click', function() {
-            const numeroPuro = whatsappInputJs.value.replace(/\D/g, '');
-
-            if (numeroPuro.length === 12) {
-                resultadoJsDiv.textContent = 'Número válido! Salvo: ' + numeroPuro;
-                resultadoJsDiv.style.color = 'green';
-            } else {
-                resultadoJsDiv.textContent = 'Número inválido! Faltam dígitos.';
-                resultadoJsDiv.style.color = 'red';
-            }
-        });
     initializeDashboardPage();
     </script>
 </body>

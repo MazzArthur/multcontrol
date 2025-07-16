@@ -414,7 +414,7 @@
                 });
                 alert('Configurações salvas com sucesso!');
             } catch (error) {
-                alert('Erro ao salvar as configurações. Tente novamente.');
+                alert(`Erro detalhado: ${error.message}`);
             } finally {
                 saveSettingsBtn.disabled = false;
                 saveSettingsBtn.textContent = 'Salvar Configurações';

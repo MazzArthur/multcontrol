@@ -254,6 +254,26 @@ app.get('/scripts/ataques.user.js', (req, res) => {
         res.send(data);
     });
 });
+app.get('/api/user/status', requireAuth, async (req, res) => {
+    try {
+        const userDoc = await db.collection('users').doc(req.user.uid).get();
+        if (userDoc.exists && userDoc.data().subscriptionTier === 'premium') {
+            const expiration = userDoc.data().subscriptionExpiresAt;
+            if (!expiration || expiration.toDate() > new Date()) {
+                // Usuário é premium e assinatura está válida
+                return res.status(200).json({
+                    tier: 'premium',
+                    expiresAt: expiration ? expiration.toDate() : null
+                });
+            }
+        }
+        // Para todos os outros casos, o usuário é considerado free.
+        return res.status(200).json({ tier: 'free' });
+    } catch (error) {
+        console.error("Erro ao verificar status do usuário:", error);
+        res.status(500).json({ error: "Erro ao verificar status do usuário." });
+    }
+});
 
 app.post('/api/build-orders', requireAuth, async (req, res) => {
     const { profileName, order } = req.body;
